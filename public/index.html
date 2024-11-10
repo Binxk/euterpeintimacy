@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Euterpe's Place</title>
+
     <style>
         body {
             background: white;
@@ -37,6 +38,7 @@
         .username {
             font-weight: bold;
             margin: 0 5px;
+            display: inline-block;
         }
         .post-area {
             width: 100%;
@@ -49,6 +51,7 @@
             border: 1px solid black;
             font-family: "Times New Roman", Times, serif;
             box-sizing: border-box;
+            resize: vertical;
         }
         .post-button {
             display: block;
@@ -77,6 +80,8 @@
             margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
         }
         .reply {
             margin-left: 20px;
@@ -98,15 +103,42 @@
         h2 {
             text-align: center;
         }
+        .error {
+            color: red;
+            text-align: center;
+            margin: 10px 0;
+            display: none;
+        }
     </style>
+  <script>
+        // Function to check if the user is logged in
+        function checkLogin() {
+            // Replace this with actual login check logic
+            return sessionStorage.getItem('loggedIn') === 'true';
+        }
+
+        // Function to get the username
+        function getUsername() {
+            // Replace this with actual logic to get the username
+            return sessionStorage.getItem('username') || 'Guest';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!checkLogin()) {
+                window.location.href = 'login.html'; // Redirect to login page if not logged in
+            } else {
+                document.getElementById('username').innerText = getUsername();
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="container">
         <h1>Euterpe's place to connect and find someone who you don't feel board around and they are different</h1>
         <div class="user-info">
             You are logged in as: <span id="username" class="username"></span>
-            <a href="/logout" class="logout">Logout</a>
         </div>
+        <div id="error-message" class="error"></div>
         <div class="post-area">
             <textarea id="post-content" placeholder="Write your post here..." rows="4"></textarea>
             <button class="post-button" onclick="createPost()">Post</button>
@@ -117,70 +149,119 @@
     </div>
     
     <script>
-        // Load messages and user info when page loads
-        window.onload = function() {
-            loadMessages();
-            loadUserInfo();
-        };
+        // Check login status immediately
+        checkLoginStatus();
 
-        function loadUserInfo() {
+        function checkLoginStatus() {
             fetch('/current-user', {
-                credentials: 'include'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.username) {
-                    document.getElementById('username').textContent = data.username;
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Not logged in');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('User data:', data);
+                if (data && data.username) {
+                    document.getElementById('username').textContent = data.username;
+                    loadMessages();
+                } else {
+                    window.location.href = '/login.html';
+                }
+            })
+            .catch(error => {
+                console.error('Error checking login status:', error);
+                window.location.href = '/login.html';
+            });
         }
 
         function loadMessages() {
-            fetch('/messages')
-                .then(response => response.json())
-                .then(data => {
-                    renderMessages(data);
-                })
-                .catch(error => console.error('Error:', error));
+            fetch('/messages', {
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load messages');
+                }
+                return response.json();
+            })
+            .then(data => {
+                renderMessages(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to load messages. Please refresh the page.');
+            });
         }
 
         function createPost() {
             const content = document.getElementById('post-content').value.trim();
-            if (!content) return;
+            if (!content) {
+                showError('Please write something before posting.');
+                return;
+            }
 
             fetch('/post', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({ content })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to create post');
+                }
+                return response.json();
+            })
             .then(() => {
                 document.getElementById('post-content').value = '';
                 loadMessages();
+                hideError();
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to create post. Please try again.');
+            });
         }
 
         function createReply(postId) {
             const replyContent = document.getElementById(`reply-${postId}`).value.trim();
-            if (!replyContent) return;
+            if (!replyContent) {
+                showError('Please write something before replying.');
+                return;
+            }
 
             fetch(`/reply/${postId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({ content: replyContent })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to create reply');
+                }
+                return response.json();
+            })
             .then(() => {
                 document.getElementById(`reply-${postId}`).value = '';
                 loadMessages();
+                hideError();
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to create reply. Please try again.');
+            });
         }
 
         function renderMessages(messages) {
@@ -202,10 +283,25 @@
                         `).join('')}
                     </div>
                     <textarea id="reply-${message.id}" placeholder="Type your reply here..." rows="2"></textarea>
-                    <button class="post-button" onclick="createReply(${message.id})">Reply</button>
+                    <button class="post-button" onclick="createReply('${message.id}')">Reply</button>
                 </div>
             `).join('');
         }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.style.display = 'none';
+        }
     </script>
+ <a href="logout.html">Logout</a>
+    <a href="post.html">Post</a>
+    <a href="messages.html">Messages</a>
 </body>
+
 </html>
