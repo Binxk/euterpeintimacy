@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Euterpe's Place</title>
+    <style>
+        body {
+            background: white;
+            color: black;
+            margin: 0;
+            padding: 20px;
+            font-family: "Times New Roman", Times, serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            width: 100%;
+            font-size: 24px;
+            line-height: 1.4;
+            margin-bottom: 30px;
+        }
+        .user-info {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid black;
+            width: 100%;
+        }
+        .post-area {
+            width: 100%;
+            margin: 20px 0;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid black;
+            font-family: "Times New Roman", Times, serif;
+            box-sizing: border-box;
+        }
+        .post-button {
+            display: block;
+            margin: 10px 0;
+            padding: 5px 20px;
+            background: white;
+            border: 1px solid black;
+            cursor: pointer;
+            font-family: "Times New Roman", Times, serif;
+        }
+        .post-button:hover {
+            background: black;
+            color: white;
+        }
+        .messages {
+            width: 100%;
+        }
+        .message {
+            border: 1px solid black;
+            margin: 10px 0;
+            padding: 15px;
+        }
+        .message-header {
+            border-bottom: 1px solid black;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .reply {
+            margin-left: 20px;
+            border: 1px solid black;
+            margin-top: 10px;
+            padding: 10px;
+        }
+        .logout {
+            color: purple;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        .logout:hover {
+            text-decoration: underline;
+        }
+        h2 {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Euterpe's place to connect and find someone who you don't feel bored around and they are different</h1>
+        <div class="user-info">
+            Logged in as: test
+            <a href="/logout" class="logout">Logout</a>
+        </div>
+        <div class="post-area">
+            <textarea id="post-content" placeholder="Write your post here..." rows="4"></textarea>
+            <button class="post-button" onclick="createPost()">Post</button>
+        </div>
+        <h2>Messages</h2>
+        <div id="messages" class="messages">
+        </div>
+    </div>
+    
+    <script>
+        // Load messages when page loads
+        window.onload = loadMessages;
+
+        function loadMessages() {
+            fetch('/messages')
+                .then(response => response.json())
+                .then(data => {
+                    renderMessages(data);
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function createPost() {
+            const content = document.getElementById('post-content').value.trim();
+            if (!content) return;
+
+            fetch('/post', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content })
+            })
+            .then(response => response.json())
+            .then(() => {
+                document.getElementById('post-content').value = '';
+                loadMessages();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function createReply(postId) {
+            const replyContent = document.getElementById(`reply-${postId}`).value.trim();
+            if (!replyContent) return;
+
+            fetch(`/reply/${postId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: replyContent })
+            })
+            .then(response => response.json())
+            .then(() => {
+                document.getElementById(`reply-${postId}`).value = '';
+                loadMessages();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function renderMessages(messages) {
+            const messagesContainer = document.getElementById('messages');
+            messagesContainer.innerHTML = messages.map(message => `
+                <div class="message">
+                    <div class="message-header">
+                        <span>${message.author}: ${message.content}</span>
+                        <span>${message.timestamp}</span>
+                    </div>
+                    <div class="replies">
+                        ${message.replies.map(reply => `
+                            <div class="reply">
+                                <div class="message-header">
+                                    <span>${reply.author}: ${reply.content}</span>
+                                    <span>${reply.timestamp}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <textarea id="reply-${message.id}" placeholder="Type your reply here..." rows="2"></textarea>
+                    <button class="post-button" onclick="createReply(${message.id})">Reply</button>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
