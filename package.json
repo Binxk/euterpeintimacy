@@ -1,12 +1,20 @@
 {
+  "name": "response-server",
+  "version": "1.0.0",
+  "description": "Euterpe's Place server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "body-parser": "^1.20.3",
-    "express": "^4.21.1",
-    "express-session": "^1.18.1",
-    "fs": "^0.0.1-security",
-    "mongodb": "^6.10.0",
-    "mongoose": "^8.8.1",
-    "multer": "^1.4.5-lts.1"
+    "bcrypt": "^5.0.1",
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "express-session": "^1.17.1",
+    "mongoose": "^5.12.3",
+    "path": "^0.12.7"
+  },
+  "engines": {
+    "node": "14.x"
   }
 }
