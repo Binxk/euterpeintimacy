@@ -98,9 +98,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>Euterpe's place to connect and find someone who you don't feel bored around and they are different</h1>
+        <h1>Euterpe's place to connect and find someone who you don't feel board around and they are different</h1>
         <div class="user-info">
-            Logged in as: test
+            Logged in as: <span id="username"></span>
             <a href="/logout" class="logout">Logout</a>
         </div>
         <div class="post-area">
@@ -113,8 +113,20 @@
     </div>
     
     <script>
-        // Load messages when page loads
-        window.onload = loadMessages;
+        // Load messages and user info when page loads
+        window.onload = function() {
+            loadMessages();
+            loadUserInfo();
+        };
+
+        function loadUserInfo() {
+            fetch('/current-user')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('username').textContent = data.username;
+                })
+                .catch(error => console.error('Error:', error));
+        }
 
         function loadMessages() {
             fetch('/messages')

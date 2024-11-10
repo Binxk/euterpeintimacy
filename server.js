@@ -4,7 +4,7 @@ const session = require('express-session');
 const path = require('path');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Store messages and users in memory
 let messages = [];
@@ -18,7 +18,10 @@ app.use(session({
     secret: 'your-secret-key',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
 }));
 
 // Authentication middleware
@@ -34,12 +37,21 @@ app.get('/', requireLogin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Get current user
+app.get('/current-user', requireLogin, (req, res) => {
+    res.json({ username: req.session.user.username });
+});
+
 app.get('/messages', requireLogin, (req, res) => {
     res.json(messages);
 });
 
 app.post('/post', requireLogin, (req, res) => {
     const { content } = req.body;
+    if (!content) {
+        return res.status(400).json({ error: 'Content is required' });
+    }
+
     const newPost = {
         id: Date.now(),
         content,
@@ -53,6 +65,10 @@ app.post('/post', requireLogin, (req, res) => {
 
 app.post('/reply/:postId', requireLogin, (req, res) => {
     const { content } = req.body;
+    if (!content) {
+        return res.status(400).json({ error: 'Content is required' });
+    }
+
     const postId = parseInt(req.params.postId);
     const post = messages.find(m => m.id === postId);
     
@@ -70,23 +86,54 @@ app.post('/reply/:postId', requireLogin, (req, res) => {
     }
 });
 
-app.post('/login', (req, res) => {
-    const { username, password } = req.body;
-    if (username && password) {
-        req.session.user = { username };
-        res.redirect('/');
-    } else {
-        res.redirect('/login.html');
+app.post('/signup', (req, res) => {
+    const { username, password, confirmPassword } = req.body;
+    
+    if (!username || !password || password !== confirmPassword) {
+        return res.redirect('/login.html?error=invalid');
     }
+
+    if (users.has(username)) {
+        return res.redirect('/login.html?error=exists');
+    }
+
+    // Store user
+    users.set(username, password);
+    
+    // Auto login after signup
+    req.session.user = { username };
+    res.redirect('/');
 });
 
-// Changed to GET request for logout
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+        return res.redirect('/login.html?error=invalid');
+    }
+
+    // For testing purposes, allow any login
+    // In production, you would check the password against stored hash
+    req.session.user = { username };
+    res.redirect('/');
+});
+
 app.get('/logout', (req, res) => {
-    req.session.destroy(() => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Error destroying session:', err);
+        }
         res.redirect('/login.html');
     });
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Something went wrong!' });
+});
+
+// Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });

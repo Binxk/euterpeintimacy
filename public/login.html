@@ -78,7 +78,7 @@
         <h1>Euterpe's place to connect and find someone who you don't feel board around and they are different</h1>
         <div class="auth-form" id="authForm">
             <h2>Login</h2>
-            <form id="loginForm" action="/login" method="POST" onsubmit="return handleSubmit(event)">
+            <form id="loginForm" action="/login" method="POST">
                 <input type="text" name="username" placeholder="Username" required>
                 <input type="password" name="password" placeholder="Password" required>
                 <button type="submit">Login</button>
@@ -88,29 +88,6 @@
     </div>
 
     <script>
-        function handleSubmit(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = new FormData(form);
-            
-            fetch(form.action, {
-                method: 'POST',
-                body: new URLSearchParams(formData),
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                credentials: 'same-origin'
-            })
-            .then(response => {
-                if (response.redirected) {
-                    window.location.href = response.url;
-                }
-            })
-            .catch(error => console.error('Error:', error));
-            
-            return false;
-        }
-
         function toggleForms() {
             const authForm = document.getElementById('authForm');
             const isLogin = authForm.querySelector('h2').textContent === 'Login';
@@ -118,7 +95,7 @@
             if (isLogin) {
                 authForm.innerHTML = `
                     <h2>Sign Up</h2>
-                    <form id="signupForm" action="/signup" method="POST" onsubmit="return handleSubmit(event)">
+                    <form id="signupForm" action="/signup" method="POST">
                         <input type="text" name="username" placeholder="Username" required>
                         <input type="password" name="password" placeholder="Password" required>
                         <input type="password" name="confirmPassword" placeholder="Confirm Password" required>
@@ -129,7 +106,7 @@
             } else {
                 authForm.innerHTML = `
                     <h2>Login</h2>
-                    <form id="loginForm" action="/login" method="POST" onsubmit="return handleSubmit(event)">
+                    <form id="loginForm" action="/login" method="POST">
                         <input type="text" name="username" placeholder="Username" required>
                         <input type="password" name="password" placeholder="Password" required>
                         <button type="submit">Login</button>
