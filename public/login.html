@@ -4,117 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Euterpe's Place</title>
-    <style>
-        body {
-            background: white;
-            color: black;
-            margin: 0;
-            padding: 20px;
-            font-family: "Times New Roman", Times, serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 400px;
-            margin: 40px auto;
-        }
-        h1 {
-            text-align: center;
-            width: 100%;
-            font-size: 24px;
-            line-height: 1.4;
-            margin-bottom: 30px;
-        }
-        .auth-form {
-            border: 1px solid black;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid black;
-            font-family: "Times New Roman", Times, serif;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background: white;
-            border: 1px solid black;
-            cursor: pointer;
-            font-family: "Times New Roman", Times, serif;
-            margin-top: 10px;
-        }
-        button:hover {
-            background: black;
-            color: white;
-        }
-        .toggle-button {
-            background: none;
-            border: none;
-            color: purple;
-            text-decoration: underline;
-            cursor: pointer;
-            padding: 10px;
-            margin-top: 20px;
-        }
-        .toggle-button:hover {
-            background: none;
-            color: purple;
-        }
-        h2 {
-            text-align: center;
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Euterpe's place to connect and find someone who you don't feel board around and they are different</h1>
-        <div class="auth-form" id="authForm">
-            <h2>Login</h2>
-            <form id="loginForm" action="/login" method="POST">
-                <input type="text" name="username" placeholder="Username" required>
-                <input type="password" name="password" placeholder="Password" required>
-                <button type="submit">Login</button>
-            </form>
-            <button class="toggle-button" onclick="toggleForms()">Need to sign up?</button>
-        </div>
-    </div>
+    <h1>Login - Euterpe's Place</h1>
+    <p>Euterpe's place to connect and find someone who you don't feel bored around and they are different.</p>
+    <form id="loginForm" action="login.php" method="POST">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <br>
+        <button type="submit">Login</button>
+    </form>
+    <p>Need to sign up? <a href="signup.html">Sign up here</a></p>
 
     <script>
-        function toggleForms() {
-            const authForm = document.getElementById('authForm');
-            const isLogin = authForm.querySelector('h2').textContent === 'Login';
-            
-            if (isLogin) {
-                authForm.innerHTML = `
-                    <h2>Sign Up</h2>
-                    <form id="signupForm" action="/signup" method="POST">
-                        <input type="text" name="username" placeholder="Username" required>
-                        <input type="password" name="password" placeholder="Password" required>
-                        <input type="password" name="confirmPassword" placeholder="Confirm Password" required>
-                        <button type="submit">Sign Up</button>
-                    </form>
-                    <button class="toggle-button" onclick="toggleForms()">Already have an account?</button>
-                `;
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Simulate a login process (replace with actual server-side logic)
+            if (username === 'testuser' && password === 'password123') {
+                sessionStorage.setItem('loggedIn', 'true');
+                sessionStorage.setItem('username', username);
+                window.location.href = 'index.html'; // Redirect to the main page
             } else {
-                authForm.innerHTML = `
-                    <h2>Login</h2>
-                    <form id="loginForm" action="/login" method="POST">
-                        <input type="text" name="username" placeholder="Username" required>
-                        <input type="password" name="password" placeholder="Password" required>
-                        <button type="submit">Login</button>
-                    </form>
-                    <button class="toggle-button" onclick="toggleForms()">Need to sign up?</button>
-                `;
+                alert('Invalid username or password');
             }
-        }
+        });
     </script>
 </body>
 </html>
