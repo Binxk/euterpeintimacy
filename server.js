@@ -69,6 +69,7 @@ app.get('/', requireLogin, (req, res) => {
 });
 
 app.get('/current-user', requireLogin, (req, res) => {
+    console.log('Session:', req.session); // Debug log
     if (req.session && req.session.user && req.session.user.username) {
         res.json({ username: req.session.user.username });
     } else {
@@ -133,6 +134,7 @@ app.post('/reply/:postId', requireLogin, async (req, res) => {
 app.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
+        console.log('Login attempt:', { username, password }); // Debug log
         
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password are required' });
@@ -140,11 +142,14 @@ app.post('/login', async (req, res) => {
         
         const user = await User.findOne({ username });
         if (!user) {
+            console.log('User not found'); // Debug log
             return res.status(400).json({ error: 'Invalid username or password' });
         }
         
+        console.log('User found:', user); // Debug log
         const match = await bcrypt.compare(password, user.password);
         if (!match) {
+            console.log('Password mismatch'); // Debug log
             return res.status(400).json({ error: 'Invalid username or password' });
         }
         
@@ -156,6 +161,7 @@ app.post('/login', async (req, res) => {
                 console.error('Session save error:', err);
                 return res.status(500).json({ error: 'Login failed' });
             }
+            console.log('Session after login:', req.session); // Debug log
             res.json({ success: true, username: username });
         });
     } catch (error) {
@@ -187,6 +193,7 @@ app.post('/signup', async (req, res) => {
                 console.error('Session save error:', err);
                 return res.status(500).json({ error: 'Signup failed' });
             }
+            console.log('Session after signup:', req.session); // Debug log
             res.json({ success: true, username: username });
         });
     } catch (error) {
