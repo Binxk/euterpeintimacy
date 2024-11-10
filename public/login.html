@@ -4,37 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Euterpe's Place</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.16/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-    <h1>Login - Euterpe's Place</h1>
-    <p>Euterpe's place to connect and find someone who you don't feel bored around and they are different.</p>
-    <form id="loginForm" action="login.php" method="POST">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
-        <br>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-        <br>
-        <button type="submit">Login</button>
-    </form>
-    <p>Need to sign up? <a href="signup.html">Sign up here</a></p>
+<body class="bg-gray-100 flex justify-center items-center h-screen">
+    <div class="bg-white text-gray-800 p-6 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-4">Login - Euterpe's Place</h1>
+        <p class="mb-4">Euterpe's place to connect and find someone who you don't feel bored around and they are different.</p>
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label for="username" class="block font-medium mb-1">Username:</label>
+                <input type="text" id="username" name="username" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="password" class="block font-medium mb-1">Password:</label>
+                <input type="password" id="password" name="password" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded">Login</button>
+            </div>
+        </form>
+        <div id="error-message" class="text-red-500 mt-2 hidden">Invalid username or password</div>
+        <p class="mt-4">Need to sign up? <a href="signup.html" class="text-blue-500 hover:text-blue-600">Sign up here</a></p>
+    </div>
 
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent the default form submission
-
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            // Simulate a login process (replace with actual server-side logic)
-            if (username === 'testuser' && password === 'password123') {
-                sessionStorage.setItem('loggedIn', 'true');
-                sessionStorage.setItem('username', username);
-                window.location.href = 'index.html'; // Redirect to the main page
-            } else {
-                alert('Invalid username or password');
-            }
-        });
-    </script>
+    <script src="login.js"></script>
 </body>
 </html>
