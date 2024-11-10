@@ -34,6 +34,10 @@
             border: 1px solid black;
             width: 100%;
         }
+        .username {
+            font-weight: bold;
+            margin: 0 5px;
+        }
         .post-area {
             width: 100%;
             margin: 20px 0;
@@ -100,7 +104,7 @@
     <div class="container">
         <h1>Euterpe's place to connect and find someone who you don't feel board around and they are different</h1>
         <div class="user-info">
-            Logged in as: <span id="username"></span>
+            You are logged in as: <span id="username" class="username"></span>
             <a href="/logout" class="logout">Logout</a>
         </div>
         <div class="post-area">
@@ -120,12 +124,16 @@
         };
 
         function loadUserInfo() {
-            fetch('/current-user')
-                .then(response => response.json())
-                .then(data => {
+            fetch('/current-user', {
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.username) {
                     document.getElementById('username').textContent = data.username;
-                })
-                .catch(error => console.error('Error:', error));
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
 
         function loadMessages() {

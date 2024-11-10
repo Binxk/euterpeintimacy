@@ -39,7 +39,11 @@ app.get('/', requireLogin, (req, res) => {
 
 // Get current user
 app.get('/current-user', requireLogin, (req, res) => {
-    res.json({ username: req.session.user.username });
+    if (req.session && req.session.user) {
+        res.json({ username: req.session.user.username });
+    } else {
+        res.status(401).json({ error: 'Not logged in' });
+    }
 });
 
 app.get('/messages', requireLogin, (req, res) => {
@@ -107,15 +111,15 @@ app.post('/signup', (req, res) => {
 
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
-    
-    if (!username || !password) {
-        return res.redirect('/login.html?error=invalid');
+    if (username && password) {
+        // Store the username in the session
+        req.session.user = { 
+            username: username // Ensures we store the actual username
+        };
+        res.redirect('/');
+    } else {
+        res.redirect('/login.html');
     }
-
-    // For testing purposes, allow any login
-    // In production, you would check the password against stored hash
-    req.session.user = { username };
-    res.redirect('/');
 });
 
 app.get('/logout', (req, res) => {
@@ -133,7 +137,6 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
