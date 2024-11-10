@@ -2,13 +2,38 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const path = require('path');
+const mongoose = require('mongoose');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Store messages and users in memory
-let messages = [];
-let users = new Map();
+// MongoDB connection (replace with your MongoDB URI from Render)
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost/euterpe-forum', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+});
+
+// Message Schema
+const MessageSchema = new mongoose.Schema({
+    content: String,
+    author: String,
+    timestamp: String,
+    replies: [{
+        content: String,
+        author: String,
+        timestamp: String
+    }]
+});
+
+const Message = mongoose.model('Message', MessageSchema);
+
+// User Schema
+const UserSchema = new mongoose.Schema({
+    username: String,
+    password: String
+});
+
+const User = mongoose.model('User', UserSchema);
 
 // Middleware setup
 app.use(bodyParser.json());
@@ -37,7 +62,6 @@ app.get('/', requireLogin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Get current user
 app.get('/current-user', requireLogin, (req, res) => {
     if (req.session && req.session.user) {
         res.json({ username: req.session.user.username });
@@ -46,79 +70,98 @@ app.get('/current-user', requireLogin, (req, res) => {
     }
 });
 
-app.get('/messages', requireLogin, (req, res) => {
-    res.json(messages);
+app.get('/messages', requireLogin, async (req, res) => {
+    try {
+        const messages = await Message.find().sort('-timestamp');
+        res.json(messages);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching messages' });
+    }
 });
 
-app.post('/post', requireLogin, (req, res) => {
-    const { content } = req.body;
-    if (!content) {
-        return res.status(400).json({ error: 'Content is required' });
-    }
+app.post('/post', requireLogin, async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content) {
+            return res.status(400).json({ error: 'Content is required' });
+        }
 
-    const newPost = {
-        id: Date.now(),
-        content,
-        author: req.session.user.username,
-        timestamp: new Date().toLocaleString(),
-        replies: []
-    };
-    messages.unshift(newPost);
-    res.json(newPost);
+        const newMessage = new Message({
+            content,
+            author: req.session.user.username,
+            timestamp: new Date().toLocaleString(),
+            replies: []
+        });
+
+        await newMessage.save();
+        res.json(newMessage);
+    } catch (error) {
+        res.status(500).json({ error: 'Error creating post' });
+    }
 });
 
-app.post('/reply/:postId', requireLogin, (req, res) => {
-    const { content } = req.body;
-    if (!content) {
-        return res.status(400).json({ error: 'Content is required' });
-    }
+app.post('/reply/:postId', requireLogin, async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content) {
+            return res.status(400).json({ error: 'Content is required' });
+        }
 
-    const postId = parseInt(req.params.postId);
-    const post = messages.find(m => m.id === postId);
-    
-    if (post) {
+        const post = await Message.findById(req.params.postId);
+        if (!post) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
         const reply = {
-            id: Date.now(),
             content,
             author: req.session.user.username,
             timestamp: new Date().toLocaleString()
         };
+
         post.replies.push(reply);
+        await post.save();
         res.json(reply);
-    } else {
-        res.status(404).json({ error: 'Post not found' });
+    } catch (error) {
+        res.status(500).json({ error: 'Error creating reply' });
     }
 });
 
-app.post('/signup', (req, res) => {
-    const { username, password, confirmPassword } = req.body;
-    
-    if (!username || !password || password !== confirmPassword) {
-        return res.redirect('/login.html?error=invalid');
-    }
+app.post('/signup', async (req, res) => {
+    try {
+        const { username, password, confirmPassword } = req.body;
+        
+        if (!username || !password || password !== confirmPassword) {
+            return res.redirect('/login.html?error=invalid');
+        }
 
-    if (users.has(username)) {
-        return res.redirect('/login.html?error=exists');
-    }
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
+            return res.redirect('/login.html?error=exists');
+        }
 
-    // Store user
-    users.set(username, password);
-    
-    // Auto login after signup
-    req.session.user = { username };
-    res.redirect('/');
-});
-
-app.post('/login', (req, res) => {
-    const { username, password } = req.body;
-    if (username && password) {
-        // Store the username in the session
-        req.session.user = { 
-            username: username // Ensures we store the actual username
-        };
+        const user = new User({ username, password });
+        await user.save();
+        
+        req.session.user = { username };
         res.redirect('/');
-    } else {
-        res.redirect('/login.html');
+    } catch (error) {
+        res.redirect('/login.html?error=server');
+    }
+});
+
+app.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        const user = await User.findOne({ username });
+        if (!user || user.password !== password) {
+            return res.redirect('/login.html?error=invalid');
+        }
+
+        req.session.user = { username };
+        res.redirect('/');
+    } catch (error) {
+        res.redirect('/login.html?error=server');
     }
 });
 
@@ -131,7 +174,6 @@ app.get('/logout', (req, res) => {
     });
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
