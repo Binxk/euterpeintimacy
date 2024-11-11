@@ -1,4 +1,3 @@
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
@@ -157,25 +156,6 @@ app.get('/health', (req, res) => {
         status: 'healthy',
         mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
     });
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Global error:', err);
-    res.status(500).json({ error: 'Something went wrong!' });
-});
-
-// Updated server startup
-app.listen(port, '0.0.0.0', () => {
-    console.log(`Server running on port ${port}`);
-});
-        res.status(500).json({ error: 'Login failed' });
-    }
-});
-
-// Add health check endpoint for Render
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'healthy' });
 });
 
 // Error handling middleware
