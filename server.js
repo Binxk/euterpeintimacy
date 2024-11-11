@@ -1,166 +1,112 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
-const path = require('path');
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const cors = require('cors');
-
-const app = express();
-const port = process.env.PORT || 3000;
-
-// MongoDB connection
-mongoose.connect(process.env.MONGODB_URI, {
-    dbName: 'euterpeintimacy'
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
-
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI,
-        dbName: 'euterpeintimacy'
-    }),
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-}));
-
-// Serve static files only after auth check
+// Add these near your other middleware
 app.use((req, res, next) => {
-    const publicPaths = ['/login.html', '/signup.html', '/styles.css', '/script.js'];
-    if (publicPaths.includes(req.path) || req.path.startsWith('/uploads/')) {
-        return next();
-    }
-    if (!req.session.user && req.path !== '/login' && req.path !== '/signup') {
-        return res.redirect('/login.html');
-    }
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
     next();
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Models
-const MessageSchema = new mongoose.Schema({
-    content: String,
-    author: String,
-    timestamp: String
-}, { timestamps: true });
-
-const Message = mongoose.model('Message', MessageSchema);
-
-const UserSchema = new mongoose.Schema({
-    username: { type: String, unique: true },
-    password: String
-}, { timestamps: true });
-
-const User = mongoose.model('User', UserSchema);
-
-// Routes
-app.get('/', (req, res) => {
-    if (!req.session.user) {
-        res.redirect('/login.html');
-    } else {
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    }
+// Add session debugging middleware
+app.use((req, res, next) => {
+    console.log('Session debug:', {
+        sessionID: req.sessionID,
+        hasSession: !!req.session,
+        user: req.session?.user
+    });
+    next();
 });
 
-app.post('/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        const user = await User.findOne({ username });
-        
-        if (!user) {
-            return res.status(401).json({ error: 'Invalid username or password' });
-        }
-
-        const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) {
-            return res.status(401).json({ error: 'Invalid username or password' });
-        }
-
-        req.session.user = { username };
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Login failed' });
-    }
-});
-
-app.post('/signup', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        const hashedPassword = await bcrypt.hash(password, 10);
-        
-        const user = new User({
-            username,
-            password: hashedPassword
-        });
-        
-        await user.save();
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Signup error:', error);
-        res.status(500).json({ error: 'Username already exists' });
-    }
-});
-
-app.post('/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            console.error('Logout error:', err);
-            return res.status(500).json({ error: 'Logout failed' });
-        }
-        res.json({ success: true });
+// Add a session check endpoint
+app.get('/check-session', (req, res) => {
+    console.log('Session check requested:', {
+        sessionID: req.sessionID,
+        session: req.session
+    });
+    res.json({
+        authenticated: !!req.session.user,
+        user: req.session.user || null
     });
 });
 
-app.get('/messages', async (req, res) => {
-    try {
-        const messages = await Message.find().sort({ createdAt: -1 });
-        res.json(messages);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch messages' });
-    }
-});
+// Update your login endpoint with more debugging
+app.post('/login', async (req, res) => {
+    console.log('Login attempt received:', {
+        body: req.body,
+        sessionID: req.sessionID
+    });
 
-app.post('/messages', async (req, res) => {
     try {
-        if (!req.session.user) {
-            return res.status(401).json({ error: 'Not authenticated' });
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            console.log('Missing credentials');
+            return res.status(400).json({ error: 'Username and password are required' });
         }
 
-        const message = new Message({
-            content: req.body.content,
-            author: req.session.user.username,
-            timestamp: new Date().toISOString()
+        console.log('Finding user:', username);
+        const user = await User.findOne({ username });
+        console.log('User found:', user ? 'Yes' : 'No');
+
+        if (!user) {
+            console.log('User not found');
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        console.log('Comparing passwords');
+        const validPassword = await bcrypt.compare(password, user.password);
+        console.log('Password valid:', validPassword);
+
+        if (!validPassword) {
+            console.log('Invalid password');
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        console.log('Creating session');
+        req.session.user = { username };
+        console.log('Session created:', req.session);
+
+        res.json({ 
+            success: true, 
+            user: { username },
+            sessionID: req.sessionID
         });
-
-        await message.save();
-        res.json(message);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to save message' });
+        console.error('Login error:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
-app.get('/current-user', (req, res) => {
-    if (req.session.user) {
-        res.json({ username: req.session.user.username });
-    } else {
-        res.status(401).json({ error: 'Not logged in' });
+// Add session verification middleware
+const verifySession = (req, res, next) => {
+    console.log('Verifying session:', {
+        sessionID: req.sessionID,
+        user: req.session?.user
+    });
+    
+    if (!req.session || !req.session.user) {
+        console.log('No valid session found');
+        return res.status(401).json({ error: 'Not authenticated' });
     }
+    next();
+};
+
+// Add this to protected routes
+app.get('/messages', verifySession, async (req, res) => {
+    // Your existing messages route code
 });
 
-// Start server
-app.listen(port, '0.0.0.0', () => {
-    console.log(`Server running on port ${port}`);
+// Add a route to check MongoDB connection
+app.get('/health', async (req, res) => {
+    try {
+        const status = mongoose.connection.readyState;
+        const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+        res.json({
+            mongodb: states[status],
+            session: !!req.session,
+            environment: process.env.NODE_ENV
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });

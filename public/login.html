@@ -13,6 +13,7 @@
         </header>
         
         <div class="login-form">
+            <div id="error-message" class="error-message" style="display: none;"></div>
             <form id="loginForm" onsubmit="return handleLogin(event)">
                 <div class="form-group">
                     <label for="username">Username:</label>
@@ -32,30 +33,76 @@
         </div>
     </div>
     <script>
+        // Debug function to display errors
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            console.error('Error:', message);
+        }
+
+        // Function to check session status
+        function checkSession() {
+            console.log('Checking session status...');
+            fetch('/check-session', {
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Session status:', data);
+                if (data.authenticated) {
+                    console.log('User is already logged in, redirecting...');
+                    window.location.href = '/';
+                }
+            })
+            .catch(error => {
+                console.error('Session check error:', error);
+            });
+        }
+
+        // Check session on page load
+        document.addEventListener('DOMContentLoaded', checkSession);
+
         function handleLogin(event) {
             event.preventDefault();
+            console.log('Login attempt started');
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            
+            console.log('Attempting login for user:', username);
+            
+            // Clear any previous error messages
+            document.getElementById('error-message').style.display = 'none';
             
             fetch('/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password }),
+                credentials: 'include'
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(response => {
+                console.log('Server response status:', response.status);
+                return response.json().then(data => ({
+                    status: response.status,
+                    data: data
+                }));
+            })
+            .then(({ status, data }) => {
+                console.log('Login response:', { status, data });
+                
                 if (data.success) {
-                    window.location.href = '/';  // Redirect to forum page
+                    console.log('Login successful, redirecting...');
+                    window.location.href = '/';
                 } else {
-                    alert(data.error || 'Login failed');
+                    throw new Error(data.error || 'Login failed');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('Login failed');
+                console.error('Login error details:', error);
+                showError(error.message || 'Login failed. Please try again.');
             });
             
             return false;
