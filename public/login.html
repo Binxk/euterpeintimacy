@@ -26,9 +26,11 @@
                 
                 <button type="submit">Login</button>
             </form>
+            <div class="form-footer">
+                <p>Don't have an account? <a href="/signup.html">Sign up</a></p>
+            </div>
         </div>
     </div>
-
     <script>
         function handleLogin(event) {
             event.preventDefault();
@@ -46,7 +48,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    window.location.href = '/';
+                    window.location.href = '/';  // Redirect to forum page
                 } else {
                     alert(data.error || 'Login failed');
                 }

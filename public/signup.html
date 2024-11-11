@@ -24,21 +24,30 @@
                     <input type="password" id="password" name="password" required>
                 </div>
                 
-                <button type="submit">Sign Up</button>
-                
-                <div class="form-footer">
-                    Already have an account? <a href="/login.html">Login here</a>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password:</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required>
                 </div>
+                
+                <button type="submit">Sign Up</button>
             </form>
+            <div class="form-footer">
+                <p>Already have an account? <a href="/login.html">Login</a></p>
+            </div>
         </div>
     </div>
-
     <script>
         function handleSignup(event) {
             event.preventDefault();
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                alert('Passwords do not match');
+                return false;
+            }
             
             fetch('/signup', {
                 method: 'POST',
@@ -50,14 +59,29 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    window.location.href = '/login.html';
+                    // After successful signup, automatically log in the user
+                    return fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ username, password })
+                    });
                 } else {
-                    alert(data.error || 'Signup failed');
+                    throw new Error(data.error || 'Signup failed');
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/';  // Redirect to forum page
+                } else {
+                    throw new Error(data.error || 'Login after signup failed');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Signup failed');
+                alert(error.message || 'Signup failed');
             });
             
             return false;
