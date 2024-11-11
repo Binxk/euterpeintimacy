@@ -3,39 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euterpe's Place</title>
+    <title>Message Board</title>
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <h1>Euterpe's Place</h1>
-    <p>Euterpe's place to connect and find someone who you don't feel bored around and they are different</p>
-    <p>You are logged in as: <span id="username"></span></p>
-    <button id="logoutButton">Logout</button>
-    <button id="postButton">Post</button>
-    <button id="messagesButton">Messages</button>
+    <div class="container">
+        <header>
+            <h1>Message Board</h1>
+            <div id="user-info">
+                Logged in as: <span id="username"></span>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </header>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const response = await fetch('/current-user');
-            const result = await response.json();
-            if (result.username) {
-                document.getElementById('username').textContent = result.username;
-            } else {
-                window.location.href = '/login.html';
-            }
-        });
+        <div class="message-form">
+            <textarea id="message-input" placeholder="Write your message here..."></textarea>
+            <button id="post-btn">Post Message</button>
+        </div>
 
-        document.getElementById('logoutButton').addEventListener('click', async () => {
-            await fetch('/logout');
-            window.location.href = '/login.html';
-        });
-
-        document.getElementById('postButton').addEventListener('click', () => {
-            window.location.href = '/post.html';
-        });
-
-        document.getElementById('messagesButton').addEventListener('click', () => {
-            window.location.href = '/messages.html';
-        });
-    </script>
+        <div id="messages" class="messages-container">
+            <!-- Messages will be inserted here -->
+        </div>
+    </div>
+    <script src="/script.js"></script>
 </body>
 </html>
