@@ -29,11 +29,15 @@
                     body: JSON.stringify({ content })
                 });
 
+                console.log('Response status:', response.status); // Debug log
+                const responseText = await response.text();
+                console.log('Response text:', responseText); // Debug log
+
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
 
-                const result = await response.json();
+                const result = JSON.parse(responseText);
                 console.log('Response:', result); // Debug log
                 if (result.error) {
                     alert(result.error);
