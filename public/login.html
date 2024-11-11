@@ -3,30 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Euterpe's Place</title>
+    <title>Login - Euterpe's intimacy</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.16/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            color: black;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 flex justify-center items-center h-screen">
-    <div class="bg-white text-gray-800 p-6 rounded-lg shadow-md w-full max-w-md">
-        <h1 class="text-2xl font-bold mb-4">Login - Euterpe's Place</h1>
-        <p class="mb-4">Euterpe's place to connect and find someone who you don't feel bored around and they are different.</p>
-        <form id="loginForm" class="space-y-4">
-            <div>
-                <label for="username" class="block font-medium mb-1">Username:</label>
-                <input type="text" id="username" name="username" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+<body class="bg-gradient-to-br from-purple-50 to-blue-50 min-h-screen">
+    <div class="min-h-screen flex flex-col justify-center items-center p-4">
+        <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Welcome Back</h1>
+            <p class="text-center text-gray-600 mb-8">
+                find people who really understand you that look at your skin at night and hate it and can't think because its all stale
+            </p>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
+                        Username
+                    </label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        required 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-colors"
+                        placeholder="Enter your username"
+                    >
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+                        Password
+                    </label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-colors"
+                        placeholder="Enter your password"
+                    >
+                </div>
+                <div id="error-container" class="hidden">
+                    <div class="bg-red-50 text-red-500 px-4 py-2 rounded-md text-sm" id="error-message"></div>
+                </div>
+                <button 
+                    type="submit" 
+                    class="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+                    id="login-button"
+                >
+                    Sign In
+                </button>
+            </form>
+            <div class="mt-6 text-center">
+                <p class="text-gray-600">
+                    Don't have an account? 
+                    <a href="signup.html" class="text-purple-600 hover:text-purple-700 font-medium">
+                        Sign up
+                    </a>
+                </p>
             </div>
-            <div>
-                <label for="password" class="block font-medium mb-1">Password:</label>
-                <input type="password" id="password" name="password" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div>
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded">Login</button>
-            </div>
-        </form>
-        <div id="error-message" class="text-red-500 mt-2 hidden">Invalid username or password</div>
-        <p class="mt-4">Need to sign up? <a href="signup.html" class="text-blue-500 hover:text-blue-600">Sign up here</a></p>
+        </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is already logged in
+            if (localStorage.getItem('token')) {
+                window.location.href = '/index.html';
+            }
+            const form = document.getElementById('loginForm');
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.getElementById('error-message');
+            const loginButton = document.getElementById('login-button');
 
-    <script src="login.js"></script>
+            // Implement the login logic here
+        });
+    </script>
 </body>
 </html>
