@@ -39,7 +39,9 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/your-database' }),
+    store: MongoStore.create({ 
+        mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/your-database'
+    }),
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
@@ -47,10 +49,37 @@ app.use(session({
     }
 }));
 
+// Authentication middleware
+const requireAuth = (req, res, next) => {
+    if (req.session && req.session.userId) {
+        next();
+    } else {
+        res.status(401).json({ error: 'Not authenticated' });
+    }
+};
+
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/your-database')
     .then(() => console.log('MongoDB connected successfully'))
     .catch(err => console.error('MongoDB connection error:', err));
+
+// Session check route
+app.get('/check-session', (req, res) => {
+    if (req.session && req.session.userId) {
+        res.json({ authenticated: true });
+    } else {
+        res.json({ authenticated: false });
+    }
+});
+
+// Current user route
+app.get('/current-user', (req, res) => {
+    if (req.session && req.session.userId) {
+        res.json({ username: req.session.user?.username });
+    } else {
+        res.status(401).json({ error: 'Not authenticated' });
+    }
+});
 
 // Auth Routes
 app.post('/signup', async (req, res) => {
@@ -88,16 +117,12 @@ app.post('/signup', async (req, res) => {
             username: user.username
         };
 
-        // Make sure session is saved before responding
         req.session.save((err) => {
             if (err) {
                 console.error('Session save error:', err);
                 return res.status(500).json({ error: 'Error creating session' });
             }
-            
             console.log('Session created successfully for:', username);
-            
-            // Send success response
             res.json({ 
                 success: true, 
                 user: { 
@@ -123,6 +148,11 @@ app.post('/login', async (req, res) => {
         }
 
         req.session.userId = user._id;
+        req.session.user = {
+            id: user._id,
+            username: user.username
+        };
+        
         req.session.save((err) => {
             if (err) {
                 console.error('Session save error:', err);
@@ -144,8 +174,36 @@ app.post('/logout', (req, res) => {
     });
 });
 
-// Add other routes here...
+// Protected routes
+app.get('/messages', requireAuth, async (req, res) => {
+    try {
+        // Your messages retrieval logic here
+        res.json([]); // Replace with actual messages
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
+app.post('/messages', requireAuth, async (req, res) => {
+    try {
+        const { content } = req.body;
+        // Your message creation logic here
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/post', requireAuth, upload.single('image'), async (req, res) => {
+    try {
+        // Your post creation logic here
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Health check route
 app.get('/health', async (req, res) => {
     try {
         res.json({
@@ -167,4 +225,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
