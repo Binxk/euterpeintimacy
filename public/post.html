@@ -3,74 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euterpe's Place</title>
-    <style>
-        body {
-            font-family: 'Times New Roman', Times, serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: white;
-            color: black;
-        }
-
-        h1 {
-            text-align: center;
-        }
-
-        button {
-            font-family: 'Times New Roman', Times, serif;
-            background-color: white;
-            border: 1px solid black;
-            padding: 5px 10px;
-            margin: 5px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #f0f0f0;
-        }
-
-        .login-status {
-            display: none; /* Hide initially */
-        }
-    </style>
+    <title>Create Post</title>
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <h1>Euterpe's Place</h1>
-    <p>Euterpe's place to connect and find someone who you don't feel bored around and they are different</p>
-    <p class="login-status">You are logged in as: <span id="username"></span></p>
-    <button id="logoutButton">Logout</button>
-    <button id="postButton">Post</button>
-    <button id="messagesButton">Messages</button>
+    <div class="container">
+        <header>
+            <h1>Create Post</h1>
+            <div id="user-info">
+                Logged in as: <span id="username"></span>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </header>
+
+        <div class="post-form">
+            <form id="postForm" onsubmit="return handlePost(event)">
+                <div class="form-group">
+                    <label for="title">Title:</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="content">Content:</label>
+                    <textarea id="content" name="content" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="image">Image (optional):</label>
+                    <input type="file" id="image" name="image" accept="image/*">
+                </div>
+
+                <button type="submit">Create Post</button>
+                <button type="button" onclick="window.location.href='/'">Cancel</button>
+            </form>
+        </div>
+    </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const response = await fetch('/current-user');
-                const result = await response.json();
-                if (result.username) {
-                    document.getElementById('username').textContent = result.username;
-                    document.querySelector('.login-status').style.display = 'block';
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if user is logged in
+            fetch('/current-user', {
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.username) {
+                    document.getElementById('username').textContent = data.username;
                 } else {
                     window.location.href = '/login.html';
                 }
-            } catch (error) {
-                console.error('Error fetching user:', error);
+            })
+            .catch(() => {
                 window.location.href = '/login.html';
+            });
+        });
+
+        function handlePost(event) {
+            event.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('content', document.getElementById('content').value);
+            
+            const imageFile = document.getElementById('image').files[0];
+            if (imageFile) {
+                formData.append('image', imageFile);
             }
-        });
 
-        document.getElementById('logoutButton').addEventListener('click', async () => {
-            await fetch('/logout');
-            window.location.href = '/login.html';
-        });
+            fetch('/post', {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    alert(data.error || 'Failed to create post');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to create post');
+            });
+            
+            return false;
+        }
 
-        document.getElementById('postButton').addEventListener('click', () => {
-            window.location.href = '/post.html';
-        });
-
-        document.getElementById('messagesButton').addEventListener('click', () => {
-            window.location.href = '/messages.html';
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            fetch('/logout', {
+                method: 'POST',
+                credentials: 'include'
+            })
+            .then(() => {
+                window.location.href = '/login.html';
+            })
+            .catch(error => console.error('Error:', error));
         });
     </script>
 </body>

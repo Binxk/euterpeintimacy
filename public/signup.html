@@ -3,43 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - Euterpe's Intimacy</title>
+    <title>Sign Up</title>
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <h1>Sign Up - Euterpe's Intimacy</h1>
-    <form id="signupForm">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
-        <br>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-        <br>
-        <button type="submit">Sign Up</button>
-    </form>
-    <p>Already have an account? <a href="/login.html">Log in</a></p>
+    <div class="container">
+        <header>
+            <h1>Sign Up</h1>
+        </header>
+        
+        <div class="login-form">
+            <form id="signupForm" onsubmit="return handleSignup(event)">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit">Sign Up</button>
+                
+                <div class="form-footer">
+                    Already have an account? <a href="/login.html">Login here</a>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
-        document.getElementById('signupForm').addEventListener('submit', async (event) => {
+        function handleSignup(event) {
             event.preventDefault();
+            
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-
-            const response = await fetch('/signup', {
+            
+            fetch('/signup', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ username, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/login.html';
+                } else {
+                    alert(data.error || 'Signup failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Signup failed');
             });
-
-            const result = await response.json();
-            if (result.success) {
-                window.location.href = '/';
-            } else {
-                alert(result.error);
-            }
-        });
+            
+            return false;
+        }
     </script>
 </body>
 </html>
-

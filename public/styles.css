@@ -136,3 +136,51 @@ button:hover {
     margin-bottom: 10px;
     font-family: 'Times New Roman', Times, serif;
 }
+
+/* Post form specific styles */
+.post-form {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid black;
+}
+
+textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: 8px;
+    border: 1px solid black;
+    font-family: 'Times New Roman', Times, serif;
+    resize: vertical;
+}
+
+.form-footer {
+    margin-top: 15px;
+    text-align: center;
+    border-top: 1px solid black;
+    padding-top: 15px;
+}
+
+.form-footer a {
+    color: black;
+    text-decoration: underline;
+}
+
+input[type="file"] {
+    border: 1px solid black;
+    padding: 5px;
+    width: 100%;
+}
+
+button + button {
+    margin-left: 10px;
+}
+
+/* Link styles */
+a {
+    color: black;
+}
+
+a:hover {
+    text-decoration: none;
+}
