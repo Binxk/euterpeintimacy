@@ -18,6 +18,7 @@
         document.getElementById('postForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             const content = document.getElementById('content').value;
+            console.log('Content:', content); // Debug log
 
             const response = await fetch('/post', {
                 method: 'POST',
@@ -28,6 +29,7 @@
             });
 
             const result = await response.json();
+            console.log('Response:', result); // Debug log
             if (result.error) {
                 alert(result.error);
             } else {

@@ -96,6 +96,7 @@ app.get('/messages', requireLogin, async (req, res) => {
 app.post('/post', requireLogin, async (req, res) => {
     try {
         const { content } = req.body;
+        console.log('Received content:', content); // Debug log
         if (!content) {
             return res.status(400).json({ error: 'Content is required' });
         }
@@ -110,30 +111,6 @@ app.post('/post', requireLogin, async (req, res) => {
     } catch (error) {
         console.error('Error creating post:', error);
         res.status(500).json({ error: 'Error creating post' });
-    }
-});
-
-app.post('/reply/:postId', requireLogin, async (req, res) => {
-    try {
-        const { content } = req.body;
-        if (!content) {
-            return res.status(400).json({ error: 'Content is required' });
-        }
-        const post = await Message.findById(req.params.postId);
-        if (!post) {
-            return res.status(404).json({ error: 'Post not found' });
-        }
-        const reply = {
-            content,
-            author: req.session.user.username,
-            timestamp: new Date().toLocaleString()
-        };
-        post.replies.push(reply);
-        await post.save();
-        res.json(reply);
-    } catch (error) {
-        console.error('Error creating reply:', error);
-        res.status(500).json({ error: 'Error creating reply' });
     }
 });
 
@@ -223,3 +200,4 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
+
