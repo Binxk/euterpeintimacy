@@ -3,289 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euterpe's Place</title>
+    <title>Euterpe's intimacy</title>
 
     <style>
-        body {
-            background: white;
-            color: black;
-            margin: 0;
-            padding: 20px;
-            font-family: "Times New Roman", Times, serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        h1 {
-            text-align: center;
-            width: 100%;
-            font-size: 24px;
-            line-height: 1.4;
-            margin-bottom: 30px;
-        }
-        .user-info {
-            text-align: center;
-            margin: 20px 0;
-            padding: 10px;
-            border: 1px solid black;
-            width: 100%;
-        }
-        .username {
-            font-weight: bold;
-            margin: 0 5px;
-            display: inline-block;
-        }
-        .post-area {
-            width: 100%;
-            margin: 20px 0;
-        }
-        textarea {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid black;
-            font-family: "Times New Roman", Times, serif;
-            box-sizing: border-box;
-            resize: vertical;
-        }
-        .post-button {
-            display: block;
-            margin: 10px 0;
-            padding: 5px 20px;
-            background: white;
-            border: 1px solid black;
-            cursor: pointer;
-            font-family: "Times New Roman", Times, serif;
-        }
-        .post-button:hover {
-            background: black;
-            color: white;
-        }
-        .messages {
-            width: 100%;
-        }
-        .message {
-            border: 1px solid black;
-            margin: 10px 0;
-            padding: 15px;
-        }
-        .message-header {
-            border-bottom: 1px solid black;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .reply {
-            margin-left: 20px;
-            border: 1px solid black;
-            margin-top: 10px;
-            padding: 10px;
-        }
-        .logout {
-            color: purple;
-            text-decoration: none;
-            display: block;
-            text-align: center;
-            margin: 10px 0;
-            cursor: pointer;
-        }
-        .logout:hover {
-            text-decoration: underline;
-        }
-        h2 {
-            text-align: center;
-        }
-        .error {
-            color: red;
-            text-align: center;
-            margin: 10px 0;
-            display: none;
-        }
+        /* Existing CSS styles */
     </style>
-  <script>
-        // Function to check if the user is logged in
-        function checkLogin() {
-            // Replace this with actual login check logic
-            return sessionStorage.getItem('loggedIn') === 'true';
-        }
-
-        // Function to get the username
-        function getUsername() {
-            // Replace this with actual logic to get the username
-            return sessionStorage.getItem('username') || 'Guest';
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            if (!checkLogin()) {
-                window.location.href = 'login.html'; // Redirect to login page if not logged in
-            } else {
-                document.getElementById('username').innerText = getUsername();
-            }
-        });
-    </script>
 </head>
 <body>
     <div class="container">
-        <h1>Euterpe's place to connect and find someone who you don't feel board around and they are different</h1>
+        <h1>Euterpe's intimacy - find people who really understand you that look at your skin at night and hate it and can't think because its all stale</h1>
+        
         <div class="user-info">
-            You are logged in as: <span id="username" class="username"></span>
+            Welcome, <span id="username" class="username">Loading...</span>
         </div>
+        
         <div id="error-message" class="error"></div>
+        
         <div class="post-area">
-            <textarea id="post-content" placeholder="Write your post here..." rows="4"></textarea>
-            <button class="post-button" onclick="createPost()">Post</button>
+            <textarea id="post-content" placeholder="Share your thoughts..." rows="4"></textarea>
+            <button class="post-button" onclick="submitResponse()">Post</button>
         </div>
-        <h2>Messages</h2>
-        <div id="messages" class="messages">
+        
+        <h2>Recent Messages</h2>
+        <div id="responsesContainer" class="messages">
+            <!-- Responses will be loaded here -->
+        </div>
+        
+        <div class="nav-links">
+            <a href="messages.html">All Messages</a>
+            <a href="post.html">New Post</a>
+            <a href="#" onclick="logout(); return false;">Logout</a>
         </div>
     </div>
-    
+
     <script>
-        // Check login status immediately
-        checkLoginStatus();
+        // Check login status when page loads
+        document.addEventListener('DOMContentLoaded', checkLoginStatus);
 
-        function checkLoginStatus() {
-            fetch('/current-user', {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Not logged in');
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('User data:', data);
-                if (data && data.username) {
-                    document.getElementById('username').textContent = data.username;
-                    loadMessages();
-                } else {
-                    window.location.href = '/login.html';
-                }
-            })
-            .catch(error => {
-                console.error('Error checking login status:', error);
+        async function checkLoginStatus() {
+            const token = localStorage.getItem('token');
+            if (!token) {
                 window.location.href = '/login.html';
-            });
-        }
+                return;
+            }
 
-        function loadMessages() {
-            fetch('/messages', {
-                credentials: 'include'
-            })
-            .then(response => {
+            try {
+                const response = await fetch('/api/current-user', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
                 if (!response.ok) {
-                    throw new Error('Failed to load messages');
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                } else {
+                    const user = await response.json();
+                    document.getElementById('username').textContent = user.username;
+                    await loadResponses();
                 }
-                return response.json();
-            })
-            .then(data => {
-                renderMessages(data);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showError('Failed to load messages. Please refresh the page.');
+            } catch (error) {
+                console.error('Login status check error:', error);
+                localStorage.removeItem('token');
+                window.location.href = '/login.html';
+            }
+        }
+
+        async function loadResponses() {
+            try {
+                const response = await fetch('/api/responses', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const responses = await response.json();
+                    updateResponsesUI(responses);
+                } else {
+                    const { error } = await response.json();
+                    showError(error);
+                }
+            } catch (error) {
+                console.error('Fetch responses error:', error);
+                showError('Failed to load responses. Please try again.');
+            }
+        }
+
+        function updateResponsesUI(responses) {
+            const responsesContainer = document.getElementById('responsesContainer');
+            responsesContainer.innerHTML = '';
+
+            responses.forEach(response => {
+                const responseElement = document.createElement('div');
+                responseElement.className = 'message';
+                responseElement.innerHTML = `
+                    <div class="message-header">
+                        <strong>${response.author}</strong>
+                        <span>${new Date(response.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="message-content">
+                        ${response.content}
+                    </div>
+                `;
+                responsesContainer.appendChild(responseElement);
             });
         }
 
-        function createPost() {
-            const content = document.getElementById('post-content').value.trim();
-            if (!content) {
+        async function submitResponse() {
+            const responseText = document.getElementById('post-content').value.trim();
+            if (!responseText) {
                 showError('Please write something before posting.');
                 return;
             }
 
-            fetch('/post', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({ content })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to create post');
-                }
-                return response.json();
-            })
-            .then(() => {
-                document.getElementById('post-content').value = '';
-                loadMessages();
-                hideError();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showError('Failed to create post. Please try again.');
-            });
-        }
+            try {
+                const response = await fetch('/api/responses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ content: responseText })
+                });
 
-        function createReply(postId) {
-            const replyContent = document.getElementById(`reply-${postId}`).value.trim();
-            if (!replyContent) {
-                showError('Please write something before replying.');
-                return;
+                if (response.ok) {
+                    document.getElementById('post-content').value = '';
+                    await loadResponses();
+                    hideError();
+                } else {
+                    const { error } = await response.json();
+                    showError(error);
+                }
+            } catch (error) {
+                console.error('Submit response error:', error);
+                showError('Failed to submit the response. Please try again.');
             }
-
-            fetch(`/reply/${postId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({ content: replyContent })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to create reply');
-                }
-                return response.json();
-            })
-            .then(() => {
-                document.getElementById(`reply-${postId}`).value = '';
-                loadMessages();
-                hideError();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showError('Failed to create reply. Please try again.');
-            });
         }
 
-        function renderMessages(messages) {
-            const messagesContainer = document.getElementById('messages');
-            messagesContainer.innerHTML = messages.map(message => `
-                <div class="message">
-                    <div class="message-header">
-                        <span>${message.author}: ${message.content}</span>
-                        <span>${message.timestamp}</span>
-                    </div>
-                    <div class="replies">
-                        ${message.replies.map(reply => `
-                            <div class="reply">
-                                <div class="message-header">
-                                    <span>${reply.author}: ${reply.content}</span>
-                                    <span>${reply.timestamp}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <textarea id="reply-${message.id}" placeholder="Type your reply here..." rows="2"></textarea>
-                    <button class="post-button" onclick="createReply('${message.id}')">Reply</button>
-                </div>
-            `).join('');
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                } else {
+                    const { error } = await response.json();
+                    showError(error);
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                showError('Failed to log out. Please try again.');
+            }
         }
 
         function showError(message) {
@@ -299,9 +174,5 @@
             errorDiv.style.display = 'none';
         }
     </script>
- <a href="logout.html">Logout</a>
-    <a href="post.html">Post</a>
-    <a href="messages.html">Messages</a>
 </body>
-
 </html>
