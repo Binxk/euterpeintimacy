@@ -13,6 +13,7 @@
         </header>
         
         <div class="login-form">
+            <div id="error-message" class="error-message" style="display: none;"></div>
             <form id="signupForm" onsubmit="return handleSignup(event)">
                 <div class="form-group">
                     <label for="username">Username:</label>
@@ -37,15 +38,27 @@
         </div>
     </div>
     <script>
+        // Function to show error messages
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            console.error('Error:', message);
+        }
+
         function handleSignup(event) {
             event.preventDefault();
+            
+            // Clear any previous error messages
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.style.display = 'none';
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             
             if (password !== confirmPassword) {
-                alert('Passwords do not match');
+                showError('Passwords do not match');
                 return false;
             }
             
@@ -54,34 +67,28 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password }),
+                credentials: 'include'  // Important for session handling
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Signup failed');
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
-                    // After successful signup, automatically log in the user
-                    return fetch('/login', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ username, password })
-                    });
+                    console.log('Signup successful, redirecting...');
+                    window.location.href = '/';  // Redirect to main page
                 } else {
                     throw new Error(data.error || 'Signup failed');
                 }
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.href = '/';  // Redirect to forum page
-                } else {
-                    throw new Error(data.error || 'Login after signup failed');
-                }
-            })
             .catch(error => {
-                console.error('Error:', error);
-                alert(error.message || 'Signup failed');
+                console.error('Signup error:', error);
+                showError(error.message || 'Signup failed');
             });
             
             return false;
