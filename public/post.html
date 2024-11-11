@@ -3,51 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Post - Euterpe's Intimacy</title>
+    <title>Euterpe's Place</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            color: black;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        button {
+            font-family: 'Times New Roman', Times, serif;
+            background-color: white;
+            border: 1px solid black;
+            padding: 5px 10px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #f0f0f0;
+        }
+
+        .login-status {
+            display: none; /* Hide initially */
+        }
+    </style>
 </head>
 <body>
-    <h1>Create a New Post</h1>
-    <form id="postForm">
-        <label for="content">Content:</label>
-        <textarea id="content" name="content" required></textarea>
-        <br>
-        <button type="submit">Post</button>
-    </form>
-
+    <h1>Euterpe's Place</h1>
+    <p>Euterpe's place to connect and find someone who you don't feel bored around and they are different</p>
+    <p class="login-status">You are logged in as: <span id="username"></span></p>
+    <button id="logoutButton">Logout</button>
+    <button id="postButton">Post</button>
+    <button id="messagesButton">Messages</button>
     <script>
-        document.getElementById('postForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const content = document.getElementById('content').value;
-            console.log('Content:', content); // Debug log
-
+        document.addEventListener('DOMContentLoaded', async () => {
             try {
-                const response = await fetch('/post', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ content })
-                });
-
-                console.log('Response status:', response.status); // Debug log
-                const responseText = await response.text();
-                console.log('Response text:', responseText); // Debug log
-
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-
-                const result = JSON.parse(responseText);
-                console.log('Response:', result); // Debug log
-                if (result.error) {
-                    alert(result.error);
+                const response = await fetch('/current-user');
+                const result = await response.json();
+                if (result.username) {
+                    document.getElementById('username').textContent = result.username;
+                    document.querySelector('.login-status').style.display = 'block';
                 } else {
-                    window.location.href = '/messages.html';
+                    window.location.href = '/login.html';
                 }
             } catch (error) {
-                console.error('Fetch error:', error);
-                alert('An error occurred while posting the content.');
+                console.error('Error fetching user:', error);
+                window.location.href = '/login.html';
             }
+        });
+
+        document.getElementById('logoutButton').addEventListener('click', async () => {
+            await fetch('/logout');
+            window.location.href = '/login.html';
+        });
+
+        document.getElementById('postButton').addEventListener('click', () => {
+            window.location.href = '/post.html';
+        });
+
+        document.getElementById('messagesButton').addEventListener('click', () => {
+            window.location.href = '/messages.html';
         });
     </script>
 </body>
