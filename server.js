@@ -5,6 +5,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const path = require('path');
 const multer = require('multer');
+const { User, Post } = require('./models');
 const app = express();
 
 // File upload configuration
