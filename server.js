@@ -39,6 +39,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/your-database' }),
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
@@ -122,7 +123,13 @@ app.post('/login', async (req, res) => {
         }
 
         req.session.userId = user._id;
-        res.json({ success: true, user: { username: user.username } });
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.status(500).json({ error: 'Error creating session' });
+            }
+            res.json({ success: true, user: { username: user.username } });
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -160,3 +167,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
