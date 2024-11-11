@@ -47,12 +47,15 @@
             fetch('/check-session', {
                 credentials: 'include'
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Session check response status:', response.status);
+                return response.json();
+            })
             .then(data => {
-                console.log('Session status:', data);
+                console.log('Session check data:', data);
                 if (data.authenticated) {
                     console.log('User is already logged in, redirecting...');
-                    window.location.href = '/';
+                    window.location.href = '/index.html';
                 }
             })
             .catch(error => {
@@ -95,7 +98,7 @@
                 
                 if (data.success) {
                     console.log('Login successful, redirecting...');
-                    window.location.href = '/';
+                    window.location.href = '/index.html';
                 } else {
                     throw new Error(data.error || 'Login failed');
                 }
