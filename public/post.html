@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Post - Euterpe's Intimacy</title>
+</head>
+<body>
+    <h1>Create a New Post</h1>
+    <form id="postForm">
+        <label for="content">Content:</label>
+        <textarea id="content" name="content" required></textarea>
+        <br>
+        <button type="submit">Post</button>
+    </form>
+
+    <script>
+        document.getElementById('postForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const content = document.getElementById('content').value;
+
+            const response = await fetch('/post', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content })
+            });
+
+            const result = await response.json();
+            if (result.error) {
+                alert(result.error);
+            } else {
+                window.location.href = '/messages.html';
+            }
+        });
+    </script>
+</body>
+</html>
