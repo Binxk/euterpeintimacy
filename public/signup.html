@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Euterpe's intimacy</title>
+    <style>
+        body {
+            background-color: white;
+            color: black;
+            font-family: "Times New Roman", Times, serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            line-height: 1.4;
+            margin-bottom: 30px;
+        }
+
+        .signup-form {
+            margin: 20px 0;
+        }
+
+        .signup-form input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .signup-button {
+            padding: 8px 20px;
+            background: white;
+            border: 1px solid black;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .signup-button:hover {
+            background: black;
+            color: white;
+        }
+
+        .error {
+            color: #d32f2f;
+            text-align: center;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .login-link a {
+            color: black;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sign Up - Euterpe's intimacy</h1>
+
+        <div id="error-container" class="error">
+            <div id="error-message"></div>
+        </div>
+
+        <div class="signup-form">
+            <input type="text" id="username" placeholder="Enter your username" required>
+            <input type="password" id="password" placeholder="Enter your password" required>
+            <button class="signup-button" onclick="signup()">Sign Up</button>
+        </div>
+
+        <div class="login-link">
+            Already have an account? <a href="login.html">Log in</a>
+        </div>
+    </div>
+
+    <script>
+        async function signup() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    const { token } = await response.json();
+                    localStorage.setItem('token', token);
+                    window.location.href = '/forum.html';
+                } else {
+                    const { error } = await response.json();
+                    document.getElementById('error-message').textContent = error;
+                    document.getElementById('error-container').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                document.getElementById('error-message').textContent = 'An error occurred during signup. Please try again.';
+                document.getElementById('error-container').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
