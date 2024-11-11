@@ -9,6 +9,17 @@ const User = require("./models/User");
 const path = require("path");
 const app = express();
 
+// Multer configuration
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'public/uploads/')
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname)
+    }
+});
+const upload = multer({ storage: storage });
+
 // Debug middleware
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -237,6 +248,66 @@ app.post("/login", async (req, res) => {
             res.json({ success: true });
         });
     });
+
+// Post routes
+app.post("/post", upload.single('image'), async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.status(401).json({ error: "Not authenticated" });
+        }
+
+        const { title, content } = req.body;
+        const post = new Post({
+            title,
+            content,
+            author: req.session.userId,
+            image: req.file ? req.file.path : undefined
+        });
+
+        await post.save();
+        res.json({ success: true, post });
+    } catch (error) {
+        console.error("Post creation error:", error);
+        res.status(500).json({ error: "Failed to create post" });
+    }
+});
+
+// Get posts route
+app.get("/posts", async (req, res) => {
+    try {
+        const posts = await Post.find()
+            .populate('author', 'username')
+            .sort({ createdAt: -1 });
+        res.json(posts);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch posts" });
+    }
+});
+
+// Add reply to post
+app.post("/post/:postId/reply", async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.status(401).json({ error: "Not authenticated" });
+        }
+
+        const post = await Post.findById(req.params.postId);
+        if (!post) {
+            return res.status(404).json({ error: "Post not found" });
+        }
+
+        post.replies.push({
+            content: req.body.content,
+            author: req.session.userId
+        });
+
+        await post.save();
+        res.json({ success: true, post });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to add reply" });
+    }
+});
+
 }
 
 const PORT = process.env.PORT || 3000;

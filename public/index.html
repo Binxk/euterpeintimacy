@@ -13,17 +13,144 @@
             <div id="user-info">
                 Logged in as: <span id="username"></span>
                 <button id="logout-btn">Logout</button>
-                <a href="/create-post.html" id="create-post-link">Create Post</a>
             </div>
         </header>
-        <div class="message-form">
-            <textarea id="message-input" placeholder="Write your message here..."></textarea>
-            <button id="post-btn">Post Message</button>
+        
+        <div class="post-form">
+            <form id="postForm">
+                <div class="form-group">
+                    <input type="text" id="title" placeholder="Post title" required>
+                </div>
+                <div class="form-group">
+                    <textarea id="content" placeholder="Write your post..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <input type="file" id="image" accept="image/*">
+                </div>
+                <button type="submit">Create Post</button>
+            </form>
         </div>
-        <div id="messages" class="messages-container">
-            <!-- Messages will be inserted here -->
+
+        <div id="posts" class="posts-container">
+            <!-- Posts will be displayed here -->
         </div>
     </div>
-    <script src="/script.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadPosts();
+            setupPostForm();
+        });
+
+        function checkAuth() {
+            fetch('/check-session', {
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.authenticated) {
+                    window.location.href = '/login.html';
+                } else {
+                    document.getElementById('username').textContent = data.user.username;
+                }
+            })
+            .catch(() => window.location.href = '/login.html');
+        }
+
+        function setupPostForm() {
+            document.getElementById('postForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData();
+                formData.append('title', document.getElementById('title').value);
+                formData.append('content', document.getElementById('content').value);
+                
+                const imageFile = document.getElementById('image').files[0];
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+
+                try {
+                    const response = await fetch('/post', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        document.getElementById('postForm').reset();
+                        loadPosts();
+                    } else {
+                        alert(data.error || 'Failed to create post');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to create post');
+                }
+            });
+        }
+
+        function loadPosts() {
+            fetch('/posts', {
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(posts => {
+                const postsContainer = document.getElementById('posts');
+                postsContainer.innerHTML = posts.map(post => `
+                    <div class="post">
+                        <h3>${post.title}</h3>
+                        <p class="author">Posted by ${post.author.username}</p>
+                        <p class="content">${post.content}</p>
+                        ${post.image ? `<img src="${post.image}" alt="Post image">` : ''}
+                        <div class="replies">
+                            ${post.replies.map(reply => `
+                                <div class="reply">
+                                    <p>${reply.content}</p>
+                                    <small>Reply by ${reply.author.username}</small>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="reply-form">
+                            <textarea placeholder="Write a reply..."></textarea>
+                            <button onclick="addReply('${post._id}', this)">Reply</button>
+                        </div>
+                    </div>
+                `).join('');
+            });
+        }
+
+        function addReply(postId, button) {
+            const replyContent = button.previousElementSibling.value;
+            if (!replyContent.trim()) return;
+
+            fetch(`/post/${postId}/reply`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ content: replyContent })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadPosts();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            fetch('/logout', {
+                method: 'POST',
+                credentials: 'include'
+            })
+            .then(() => window.location.href = '/login.html')
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
 </body>
 </html>
