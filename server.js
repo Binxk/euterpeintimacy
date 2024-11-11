@@ -134,8 +134,11 @@ app.post("/test-db/add-users", async (req, res) => {
     }
 });
 
+// Login routes
+app.get("/login", (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
 
-// Login route
 app.post("/login", async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -170,7 +173,6 @@ app.post("/login", async (req, res) => {
         res.status(500).json({ error: "Login failed" });
     }
 });
-
 
 // Add this before the signup route
     // Session check route
