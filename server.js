@@ -3,7 +3,31 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
+const path = require('path');
+const multer = require('multer');
 const app = express();
+
+// File upload configuration
+const storage = multer.diskStorage({
+    destination: 'public/uploads/',
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        if (extname && mimetype) {
+            return cb(null, true);
+        }
+        cb(new Error('Only image files are allowed!'));
+    }
+});
 
 // Session monitoring values
 const ALERT_THRESHOLD = {
@@ -47,15 +71,16 @@ sessionStore.on('destroy', (sessionId) => {
 
 // Middleware setup
 app.use(express.json());
+app.use(express.static('public')); // Serving static files
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
-    store: sessionStore, // Use MongoDB store
+    store: sessionStore,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        maxAge: 24 * 60 * 60 * 1000,
         sameSite: 'strict'
     },
     name: 'sessionId'
@@ -105,13 +130,13 @@ app.use((req, res, next) => {
     next();
 });
 
-// Your existing request logging middleware
+// Request logging middleware
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
     next();
 });
 
-// Your existing session debugging middleware
+// Session debugging middleware
 app.use((req, res, next) => {
     console.log('Session debug:', {
         sessionID: req.sessionID,
@@ -119,6 +144,160 @@ app.use((req, res, next) => {
         user: req.session?.user
     });
     next();
+});
+
+// Auth middleware
+const auth = (req, res, next) => {
+    if (!req.session.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    next();
+};
+
+// ROUTES
+
+// Auth routes
+app.post('/signup', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
+
+        const user = new User({ username, password });
+        await user.save();
+
+        req.session.userId = user._id;
+        res.json({ success: true, user: { username: user.username } });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await User.findOne({ username });
+        
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        user.lastLogin = new Date();
+        await user.save();
+
+        req.session.userId = user._id;
+        res.json({ success: true, user: { username: user.username } });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/logout', (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            return res.status(500).json({ error: 'Could not log out' });
+        }
+        res.json({ success: true });
+    });
+});
+
+// Post routes
+app.post('/post', auth, upload.single('image'), async (req, res) => {
+    try {
+        const { title, content } = req.body;
+        const post = new Post({
+            title,
+            content,
+            author: req.session.userId,
+            image: req.file ? `/uploads/${req.file.filename}` : null
+        });
+        await post.save();
+        res.json({ success: true, post });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/posts', async (req, res) => {
+    try {
+        const posts = await Post.find()
+            .sort({ createdAt: -1 })
+            .populate('author', 'username')
+            .populate('replies.author', 'username');
+        res.json(posts);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/post/:postId/reply', auth, async (req, res) => {
+    try {
+        const { content } = req.body;
+        const post = await Post.findById(req.params.postId);
+        
+        if (!post) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
+        post.replies.push({
+            content,
+            author: req.session.userId
+        });
+
+        await post.save();
+        res.json({ success: true, post });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+    try {
+        const sessionCollection = mongoose.connection.collection('sessions');
+        const activeSessions = await sessionCollection.countDocuments();
+        
+        res.json({
+            status: 'healthy',
+            timestamp: new Date(),
+            environment: process.env.NODE_ENV,
+            mongodb: {
+                status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+                activeSessions
+            },
+            metrics: {
+                ...sessionMetrics,
+                memoryUsage: {
+                    heap: process.memoryUsage().heapUsed,
+                    total: process.memoryUsage().heapTotal,
+                    percentage: (process.memoryUsage().heapUsed / process.memoryUsage().heapTotal * 100).toFixed(2)
+                },
+                responseTime: {
+                    average: sessionMetrics.averageResponseTime,
+                    samples: sessionMetrics.responseTimeSamples.length
+                }
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'unhealthy',
+            error: error.message,
+            timestamp: new Date()
+        });
+    }
+});
+
+// User routes
+app.get('/current-user', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.session.userId).select('-password');
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Session cleanup function
@@ -160,58 +339,14 @@ async function checkSessionThresholds() {
     }
 }
 
-// Your existing verifySession middleware
-const verifySession = (req, res, next) => {
-    console.log('Verifying session:', {
-        sessionID: req.sessionID,
-        user: req.session?.user
+// Error handling middleware (should be last)
+app.use((err, req, res, next) => {
+    console.error('Global error handler:', err);
+    res.status(500).json({
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
-    
-    if (!req.session || !req.session.user) {
-        console.log('No valid session found');
-        return res.status(401).json({ error: 'Not authenticated' });
-    }
-    next();
-};
-
-// Update your health check endpoint
-app.get('/health', async (req, res) => {
-    try {
-        const sessionCollection = mongoose.connection.collection('sessions');
-        const activeSessions = await sessionCollection.countDocuments();
-        
-        res.json({
-            status: 'healthy',
-            timestamp: new Date(),
-            environment: process.env.NODE_ENV,
-            mongodb: {
-                status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-                activeSessions
-            },
-            metrics: {
-                ...sessionMetrics,
-                memoryUsage: {
-                    heap: process.memoryUsage().heapUsed,
-                    total: process.memoryUsage().heapTotal,
-                    percentage: (process.memoryUsage().heapUsed / process.memoryUsage().heapTotal * 100).toFixed(2)
-                },
-                responseTime: {
-                    average: sessionMetrics.averageResponseTime,
-                    samples: sessionMetrics.responseTimeSamples.length
-                }
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'unhealthy',
-            error: error.message,
-            timestamp: new Date()
-        });
-    }
 });
-
-// Your existing routes remain the same
-// ... (keep your existing routes as they are)
 
 // Graceful shutdown handler
 process.on('SIGTERM', async () => {
