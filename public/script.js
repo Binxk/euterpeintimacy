@@ -1,33 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if user is logged in and get username
+    // Get current user info
     getCurrentUser();
-    // Load initial messages
-    getMessages();
-    // Set up event listeners
-    setupEventListeners();
+    
+    // Load messages if we're on the index page
+    if (window.location.pathname === '/') {
+        getMessages();
+        setupMessageForm();
+    }
+    
+    // Setup logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
 });
-
-function setupEventListeners() {
-    // Post message button
-    document.getElementById('post-btn').addEventListener('click', () => {
-        const content = document.getElementById('message-input').value.trim();
-        if (content) {
-            postMessage(content);
-            document.getElementById('message-input').value = ''; // Clear input
-        }
-    });
-
-    // Logout button
-    document.getElementById('logout-btn').addEventListener('click', logout);
-
-    // Enter key in textarea
-    document.getElementById('message-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            document.getElementById('post-btn').click();
-        }
-    });
-}
 
 function getCurrentUser() {
     fetch('/current-user', {
@@ -42,10 +28,38 @@ function getCurrentUser() {
     })
     .then(data => {
         if (data && data.username) {
-            document.getElementById('username').textContent = data.username;
+            const usernameSpan = document.getElementById('username');
+            if (usernameSpan) {
+                usernameSpan.textContent = data.username;
+            }
         }
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        window.location.href = '/login.html';
+    });
+}
+
+function setupMessageForm() {
+    const postBtn = document.getElementById('post-btn');
+    const messageInput = document.getElementById('message-input');
+    
+    if (postBtn && messageInput) {
+        postBtn.addEventListener('click', () => {
+            const content = messageInput.value.trim();
+            if (content) {
+                postMessage(content);
+                messageInput.value = '';
+            }
+        });
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                postBtn.click();
+            }
+        });
+    }
 }
 
 function postMessage(content) {
@@ -69,7 +83,7 @@ function postMessage(content) {
         if (data.error) {
             console.error('Error:', data.error);
         } else {
-            getMessages(); // Refresh messages
+            getMessages();
         }
     })
     .catch(error => console.error('Error:', error));
@@ -77,9 +91,6 @@ function postMessage(content) {
 
 function getMessages() {
     fetch('/messages', {
-        headers: {
-            'Accept': 'application/json'
-        },
         credentials: 'include'
     })
     .then(response => {
@@ -116,6 +127,8 @@ function logout() {
     .then(() => {
         window.location.href = '/login.html';
     })
-    .catch(error => console.error('Error:', error));
-}
+    .catch(error => {
+        console.error('Error:', error);
+        window.location.href = '/login.html';
+    });
 }
