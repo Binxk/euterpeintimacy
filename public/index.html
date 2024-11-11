@@ -4,176 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Euterpe's intimacy</title>
-
-    <style>
-        /* Existing CSS styles */
-    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Euterpe's intimacy - find people who really understand you that look at your skin at night and hate it and can't think because its all stale</h1>
-        
-        <div class="user-info">
-            Welcome, <span id="username" class="username">Loading...</span>
-        </div>
-        
-        <div id="error-message" class="error"></div>
-        
-        <div class="post-area">
-            <textarea id="post-content" placeholder="Share your thoughts..." rows="4"></textarea>
-            <button class="post-button" onclick="submitResponse()">Post</button>
-        </div>
-        
-        <h2>Recent Messages</h2>
-        <div id="responsesContainer" class="messages">
-            <!-- Responses will be loaded here -->
-        </div>
-        
-        <div class="nav-links">
-            <a href="messages.html">All Messages</a>
-            <a href="post.html">New Post</a>
-            <a href="signup.html">Sign Up</a>
-            <a href="#" onclick="logout(); return false;">Logout</a>
-        </div>
-    </div>
+    <h1>Euterpe's intimacy</h1>
+    <p>Euterpe's forum to connect and find someone who you don't feel bored around and they are different</p>
+    <p>You are logged in as: <span id="username"></span></p>
+    <button id="logoutButton">Logout</button>
+    <button id="postButton">Post</button>
+    <button id="messagesButton">Messages</button>
 
     <script>
-        // Check login status when page loads
-        document.addEventListener('DOMContentLoaded', checkLoginStatus);
-
-        async function checkLoginStatus() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                window.location.href = '/login.html';
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/current-user', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    localStorage.removeItem('token');
-                    window.location.href = '/login.html';
-                } else {
-                    const user = await response.json();
-                    document.getElementById('username').textContent = user.username;
-                    await loadResponses();
-                }
-            } catch (error) {
-                console.error('Login status check error:', error);
-                localStorage.removeItem('token');
+        document.addEventListener('DOMContentLoaded', async () => {
+            const response = await fetch('/current-user');
+            const result = await response.json();
+            if (result.username) {
+                document.getElementById('username').textContent = result.username;
+            } else {
                 window.location.href = '/login.html';
             }
-        }
+        });
 
-        async function loadResponses() {
-            try {
-                const response = await fetch('/api/responses', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
+        document.getElementById('logoutButton').addEventListener('click', async () => {
+            await fetch('/logout');
+            window.location.href = '/login.html';
+        });
 
-                if (response.ok) {
-                    const responses = await response.json();
-                    updateResponsesUI(responses);
-                } else {
-                    const { error } = await response.json();
-                    showError(error);
-                }
-            } catch (error) {
-                console.error('Fetch responses error:', error);
-                showError('Failed to load responses. Please try again.');
-            }
-        }
+        document.getElementById('postButton').addEventListener('click', () => {
+            window.location.href = '/post.html';
+        });
 
-        function updateResponsesUI(responses) {
-            const responsesContainer = document.getElementById('responsesContainer');
-            responsesContainer.innerHTML = '';
-
-            responses.forEach(response => {
-                const responseElement = document.createElement('div');
-                responseElement.className = 'message';
-                responseElement.innerHTML = `
-                    <div class="message-header">
-                        <strong>${response.author}</strong>
-                        <span>${new Date(response.timestamp).toLocaleString()}</span>
-                    </div>
-                    <div class="message-content">
-                        ${response.content}
-                    </div>
-                `;
-                responsesContainer.appendChild(responseElement);
-            });
-        }
-
-        async function submitResponse() {
-            const responseText = document.getElementById('post-content').value.trim();
-            if (!responseText) {
-                showError('Please write something before posting.');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/responses', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify({ content: responseText })
-                });
-
-                if (response.ok) {
-                    document.getElementById('post-content').value = '';
-                    await loadResponses();
-                    hideError();
-                } else {
-                    const { error } = await response.json();
-                    showError(error);
-                }
-            } catch (error) {
-                console.error('Submit response error:', error);
-                showError('Failed to submit the response. Please try again.');
-            }
-        }
-
-        async function logout() {
-            try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-
-                if (response.ok) {
-                    localStorage.removeItem('token');
-                    window.location.href = '/login.html';
-                } else {
-                    const { error } = await response.json();
-                    showError(error);
-                }
-            } catch (error) {
-                console.error('Logout error:', error);
-                showError('Failed to log out. Please try again.');
-            }
-        }
-
-        function showError(message) {
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-        }
-
-        function hideError() {
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.style.display = 'none';
-        }
+        document.getElementById('messagesButton').addEventListener('click', () => {
+            window.location.href = '/messages.html';
+        });
     </script>
 </body>
 </html>
