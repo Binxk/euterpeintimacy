@@ -28,24 +28,23 @@ function getCurrentUser() {
     fetch('/current-user', {
         credentials: 'include'
     })
-    .then(response => {
-        if (response.status === 401) {
-            window.location.href = '/login.html';
-            return;
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data && data.username) {
             const usernameSpan = document.getElementById('username');
             if (usernameSpan) {
                 usernameSpan.textContent = data.username;
             }
+        } else {
+            // Clear the username if the user is not authenticated
+            const usernameSpan = document.getElementById('username');
+            if (usernameSpan) {
+                usernameSpan.textContent = '';
+            }
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        window.location.href = '/login.html';
     });
 }
 
@@ -71,6 +70,14 @@ function setupMessageForm() {
 }
 
 function postMessage(content) {
+    // Check if the user is authenticated
+    const usernameSpan = document.getElementById('username');
+    if (!usernameSpan || usernameSpan.textContent === '') {
+        // Redirect the user to the login page
+        window.location.href = '/login.html';
+        return;
+    }
+
     fetch('/messages', {
         method: 'POST',
         headers: {
@@ -80,13 +87,7 @@ function postMessage(content) {
         body: JSON.stringify({ content }),
         credentials: 'include'
     })
-    .then(response => {
-        if (response.status === 401) {
-            window.location.href = '/login.html';
-            return;
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.error) {
             console.error('Error:', data.error);
@@ -98,16 +99,18 @@ function postMessage(content) {
 }
 
 function getMessages() {
+    // Check if the user is authenticated
+    const usernameSpan = document.getElementById('username');
+    if (!usernameSpan || usernameSpan.textContent === '') {
+        // Redirect the user to the login page
+        window.location.href = '/login.html';
+        return;
+    }
+
     fetch('/messages', {
         credentials: 'include'
     })
-    .then(response => {
-        if (response.status === 401) {
-            window.location.href = '/login.html';
-            return;
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(messages => {
         displayMessages(messages);
     })
@@ -142,28 +145,30 @@ function logout() {
 
 function createPost(event) {
     event.preventDefault();
-    
+
+    // Check if the user is authenticated
+    const usernameSpan = document.getElementById('username');
+    if (!usernameSpan || usernameSpan.textContent === '') {
+        // Redirect the user to the login page
+        window.location.href = '/login.html';
+        return;
+    }
+
     const titleInput = document.getElementById('title');
     const contentInput = document.getElementById('content');
     const imageInput = document.getElementById('image');
-    
+
     const formData = new FormData();
     formData.append('title', titleInput.value);
     formData.append('content', contentInput.value);
     formData.append('image', imageInput.files[0]);
-    
+
     fetch('/create-post', {
         method: 'POST',
         body: formData,
         credentials: 'include'
     })
-    .then(response => {
-        if (response.status === 401) {
-            window.location.href = '/login.html';
-            return;
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.error) {
             console.error('Error creating post:', data.error);
@@ -175,6 +180,6 @@ function createPost(event) {
     .catch(error => {
         console.error('Error creating post:', error);
     });
-    
+
     return false;
 }
