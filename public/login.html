@@ -3,36 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Euterpe's intimacy</title>
-    <style>
-        /* Existing CSS styles */
-    </style>
+    <title>Log In - Euterpe's Intimacy</title>
 </head>
 <body>
-    <div class="container">
-        <h1>Login - Euterpe's intimacy</h1>
-        
-        <div class="user-info">
-            Welcome, <span id="username" class="username">Loading...</span>
-        </div>
-        
-        <div id="error-container" class="error">
-            <div id="error-message"></div>
-        </div>
-        
-        <div class="login-form">
-            <input type="text" id="username" placeholder="Enter your username" required>
-            <input type="password" id="password" placeholder="Enter your password" required>
-            <button class="login-button" onclick="login()">Sign In</button>
-        </div>
-
-        <div class="signup-link">
-            Don't have an account? <a href="signup.html">Sign up</a>
-        </div>
-    </div>
+    <h1>Log In - Euterpe's Intimacy</h1>
+    <form id="loginForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <br>
+        <button type="submit">Log In</button>
+    </form>
+    <p>Don't have an account? <a href="/signup.html">Sign up</a></p>
 
     <script>
-        // Existing login.html script
+        document.getElementById('loginForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                window.location.href = '/';
+            } else {
+                alert(result.error);
+            }
+        });
     </script>
 </body>
 </html>
+
