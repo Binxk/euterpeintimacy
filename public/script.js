@@ -13,6 +13,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', logout);
     }
+    
+    // Set up "Create Post" link
+    const createPostLink = document.getElementById('create-post-link');
+    if (createPostLink) {
+        createPostLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            window.location.href = '/create-post.html';
+        });
+    }
 });
 
 function getCurrentUser() {
@@ -52,7 +61,6 @@ function setupMessageForm() {
                 messageInput.value = '';
             }
         });
-
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -109,7 +117,6 @@ function getMessages() {
 function displayMessages(messages) {
     const messagesContainer = document.getElementById('messages');
     if (!messagesContainer) return;
-
     messagesContainer.innerHTML = messages.map(message => `
         <div class="message">
             <strong>${message.author}</strong>
@@ -131,4 +138,43 @@ function logout() {
         console.error('Error:', error);
         window.location.href = '/login.html';
     });
+}
+
+function createPost(event) {
+    event.preventDefault();
+    
+    const titleInput = document.getElementById('title');
+    const contentInput = document.getElementById('content');
+    const imageInput = document.getElementById('image');
+    
+    const formData = new FormData();
+    formData.append('title', titleInput.value);
+    formData.append('content', contentInput.value);
+    formData.append('image', imageInput.files[0]);
+    
+    fetch('/create-post', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+    })
+    .then(response => {
+        if (response.status === 401) {
+            window.location.href = '/login.html';
+            return;
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            console.error('Error creating post:', data.error);
+        } else {
+            // Redirect to the post page or display the new post
+            window.location.href = `/post/${data._id}`;
+        }
+    })
+    .catch(error => {
+        console.error('Error creating post:', error);
+    });
+    
+    return false;
 }
