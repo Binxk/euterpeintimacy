@@ -1,272 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Euterpe's Intimacy</title>
     <style>
-        body {
-            font-family: "Times New Roman", Times, serif;
-            color: #000;
-            background-color: #fff;
-            line-height: 1.6;
+        .hidden {
+            display: none;
         }
         .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: auto;
+            padding: 1rem;
         }
-        .post {
-            border: 1px solid #000;
-            margin: 10px 0;
-            padding: 15px;
+        .posts-container {
+            margin-top: 1rem;
         }
         .post-image {
             max-width: 100%;
             height: auto;
-            margin: 10px 0;
-        }
-        .delete-btn {
-            float: right;
-            color: #000;
-            cursor: pointer;
-            padding: 5px 10px;
-            border: 1px solid #000;
-            background: #fff;
-            font-family: "Times New Roman", Times, serif;
-        }
-        .delete-btn:hover {
-            background-color: #f0f0f0;
-        }
-        .replies {
-            margin-left: 20px;
-            border-left: 1px solid #000;
-            padding-left: 10px;
-            margin-top: 10px;
-        }
-        .reply {
-            margin: 5px 0;
-            padding: 5px;
-        }
-        .form-group {
-            margin: 10px 0;
-        }
-        input, textarea {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid #000;
-            font-family: "Times New Roman", Times, serif;
-        }
-        textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-        #user-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 10px;
-            border-bottom: 1px solid #000;
-        }
-        .reply-form {
-            margin-top: 10px;
-        }
-        button {
-            padding: 8px 15px;
-            background-color: #fff;
-            color: #000;
-            border: 1px solid #000;
-            cursor: pointer;
-            font-family: "Times New Roman", Times, serif;
-        }
-        button:hover {
-            background-color: #f0f0f0;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div>
-            <h1>Message Board</h1>
+        <h1>Euterpe's Intimacy</h1>
 
-            <div id="user-info">
-                <div>
-                    Logged in as: <span id="username"></span>
+        <div id="user-info">
+            <div>
+                Logged in as: <span id="username"></span>
+            </div>
+            <button onclick="logout()">Logout</button>
+        </div>
+
+        <div id="post-form">
+            <h2>Create Your Post</h2>
+            <form id="create-post-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <input type="text" id="title" name="title" placeholder="Title" required>
                 </div>
-                <button onclick="logout()">Logout</button>
-            </div>
+                <div class="form-group">
+                    <textarea id="content" name="content" placeholder="Content" required></textarea>
+                </div>
+                <div class="form-group">
+                    <input type="file" id="image" name="image" accept="image/*">
+                </div>
+                <button type="submit">Create Post</button>
+            </form>
+        </div>
 
-            <div class="post-form">
-                <h2>Create Your Post</h2>
-                <form id="post-form" enctype="multipart/form-data">
-                    <div class="form-group">
-                        <input type="text" id="post-title" name="title" placeholder="Title" required>
-                    </div>
-                    <div class="form-group">
-                        <textarea id="post-content" name="content" placeholder="Write your post here..." required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <input type="file" id="post-image" name="image" accept="image/*">
-                    </div>
-                    <button type="submit">Create Post</button>
-                </form>
-            </div>
-
-            <div id="posts" class="posts-container"></div>
+        <div id="posts" class="posts-container">
+            <!-- Posts will be dynamically inserted here -->
         </div>
     </div>
 
     <script>
-        let currentUser;
-
-        // Check authentication status on page load
-        fetch('/check-session', {
-            credentials: 'include'
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.authenticated) {
-                currentUser = data.user;
-                document.getElementById('username').textContent = currentUser.username;
-                loadPosts(); // Only load posts after confirming authentication
-            } else {
-                window.location.href = '/login';
+        // Function to check authentication status
+        async function checkAuth() {
+            try {
+                const response = await fetch('/check-session');
+                const data = await response.json();
+                if (data.authenticated) {
+                    document.getElementById('username').textContent = data.user.username;
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
             }
-        })
-        .catch(error => {
-            console.error('Session check error:', error);
-            window.location.href = '/login';
-        });
+        }
 
-        // Load posts
-        function loadPosts() {
-            fetch('/posts', {
-                credentials: 'include'
-            })
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch posts');
-                return res.json();
-            })
-            .then(posts => {
+        // Function to handle logout
+        async function logout() {
+            try {
+                await fetch('/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+
+        // Function to load posts
+        async function loadPosts() {
+            try {
+                const response = await fetch('/posts');
+                const posts = await response.json();
                 const postsContainer = document.getElementById('posts');
                 postsContainer.innerHTML = '';
-                
-                if (posts.length === 0) {
-                    postsContainer.innerHTML = '<p>No posts yet.</p>';
-                    return;
-                }
 
                 posts.forEach(post => {
                     const postElement = document.createElement('div');
                     postElement.className = 'post';
-                    
-                    const deleteButton = post.author._id === currentUser.userId 
-                        ? `<button class="delete-btn" onclick="deletePost('${post._id}')">Delete</button>`
-                        : '';
-
-                    const imageHtml = post.image 
-                        ? `<img src="${post.image}" class="post-image" alt="Post image">` 
-                        : '';
-
-                    const repliesHtml = post.replies && post.replies.length > 0
-                        ? `<div class="replies">
-                            ${post.replies.map(reply => `
-                                <div class="reply">
-                                    <p><strong>${reply.author ? reply.author.username : 'Unknown'}</strong>: ${reply.content}</p>
-                                </div>
-                            `).join('')}
-                           </div>`
-                        : '';
-
-                    postElement.innerHTML = `
-                        <h3>${post.title} ${deleteButton}</h3>
-                        <p>Posted by <strong>${post.author.username}</strong></p>
+                    let postContent = `
+                        <h3>${post.title}</h3>
                         <p>${post.content}</p>
-                        ${imageHtml}
-                        ${repliesHtml}
-                        <div class="reply-form">
-                            <input type="text" placeholder="Write a reply..." 
-                                   onkeypress="if(event.key === 'Enter') addReply('${post._id}', this)">
-                        </div>
+                        <p>Posted by: ${post.author.username}</p>
                     `;
                     
+                    // Add image if present
+                    if (post.image) {
+                        postContent += `<img src="${post.image}" alt="Post image" class="post-image">`;
+                    }
+
+                    postElement.innerHTML = postContent;
                     postsContainer.appendChild(postElement);
                 });
-            })
-            .catch(error => {
-                console.error('Error loading posts:', error);
-            });
-        }
-
-        // Create post
-        document.getElementById('post-form').onsubmit = function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            
-            fetch('/post', {
-                method: 'POST',
-                credentials: 'include',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    this.reset();
-                    loadPosts();
-                }
-            });
-        };
-
-        // Delete post
-        function deletePost(postId) {
-            if (confirm('Delete this post?')) {
-                fetch(`/posts/${postId}`, {
-                    method: 'DELETE',
-                    credentials: 'include'
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        loadPosts();
-                    }
-                });
+            } catch (error) {
+                console.error('Failed to load posts:', error);
             }
         }
 
-        // Add reply
-        function addReply(postId, input) {
-            if (!input.value.trim()) return;
-            
-            fetch(`/post/${postId}/reply`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ content: input.value })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    input.value = '';
+        // Handle form submission
+        document.getElementById('create-post-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('content', document.getElementById('content').value);
+            const imageFile = document.getElementById('image').files[0];
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+
+            try {
+                const response = await fetch('/post', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('create-post-form').reset();
                     loadPosts();
                 }
-            });
-        }
+            } catch (error) {
+                console.error('Failed to create post:', error);
+            }
+        });
 
-        // Logout function
-        function logout() {
-            fetch('/logout', {
-                method: 'POST',
-                credentials: 'include'
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.href = '/login';
-                }
-            });
-        }
+        // Initialize
+        checkAuth();
+        loadPosts();
     </script>
 </body>
 </html>
