@@ -79,27 +79,81 @@ function setupSessions() {
 }
 
 function setupRoutes() {
-    // Test route
-    app.get("/test-env", (req, res) => {
-        console.log("Session data:", req.session);
+    // New Debug Database Route
+    app.get("/debug-db", async (req, res) => {
+    try {
+        console.log("Entering /debug-db route");
+
+        // 1. Database connection info
+        const connectionState = mongoose.connection.readyState;
+        const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+        console.log("MongoDB connection state:", states[connectionState]);
+        
+        // 2. List all collections
+        const collections = await mongoose.connection.db.listCollections().toArray();
+        console.log("MongoDB collections:", collections.map(c => c.name));
+        
+        // 3. Get counts from both collections
+        const userCount = await User.countDocuments();
+        const postCount = await Post.countDocuments();
+        console.log("User count:", userCount, "Post count:", postCount);
+
+        // 4. Try to create a test user if none exist
+        let testUserResult = null;
+        if (userCount === 0) {
+            console.log("No users found, creating a test user");
+            const testUser = new User({
+                username: `test_${Date.now()}`,
+                password: "test123"
+            });
+            testUserResult = await testUser.save();
+            console.log("Test user created:", testUserResult);
+        }
+
+        // 5. Get one user sample if any exist
+        const sampleUser = await User.findOne({});
+        console.log("Sample user:", sampleUser);
+
         res.json({
-            mongoDBConnected: mongoose.connection.readyState === 1,
-            nodeEnv: process.env.NODE_ENV,
-            port: process.env.PORT,
-            sessionActive: !!req.session,
-            sessionID: req.sessionID,
-            userId: req.session?.userId
+            connection: {
+                state: states[connectionState],
+                host: mongoose.connection.host,
+                name: mongoose.connection.name,
+                port: mongoose.connection.port
+            },
+            collections: collections.map(c => c.name),
+            counts: {
+                users: userCount,
+                posts: postCount
+            },
+            testUser: testUserResult,
+            sampleUser: sampleUser ? {
+                id: sampleUser._id,
+                username: sampleUser.username,
+                created: sampleUser.createdAt
+            } : null
         });
-    });
+    } catch (error) {
+        console.error("Error in /debug-db route:", error);
+        res.status(500).json({
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
 
     // Test DB route
     app.get("/test-db", async (req, res) => {
         try {
+            console.log("Entering /test-db route");
+
             // Basic connection test
             const isConnected = mongoose.connection.readyState === 1;
+            console.log("MongoDB connection state:", isConnected ? "connected" : "not connected");
             
-            // Optional: Get count of users to verify database access
+            // Get count of users to verify database access
             const userCount = await User.countDocuments();
+            console.log("User count:", userCount);
             
             res.json({
                 connected: isConnected,
@@ -115,49 +169,86 @@ function setupRoutes() {
         }
     });
 
-    // Add test users route
-    app.post("/test-db/add-users", async (req, res) => {
+    // Check User model route
+    app.get("/check-user", async (req, res) => {
         try {
-            // Create test users (without pre-hashing passwords)
-            const testUsers = [
-                { username: "alice", password: "test123" },
-                { username: "bob", password: "test123" },
-                { username: "charlie", password: "test123" }
-            ];
-
-            // Clear existing users
-            await User.deleteMany({});
-
-            // Add new users (passwords will be hashed by the pre-save middleware)
-            const createdUsers = await Promise.all(
-                testUsers.map(user => new User(user).save())
-            );
-
-            // Verify we can find and authenticate a user
-            const testFind = await User.findOne({ username: "alice" });
-            console.log("Test find user alice:", testFind ? "found" : "not found");
-            if (testFind) {
-                const testPassword = await bcrypt.compare("test123", testFind.password);
-                console.log("Password test result:", testPassword);
-            }
+            console.log("Checking User model...");
+            
+            // Fetch all users
+            const users = await User.find({});
+            console.log("Users found:", users.length);
 
             res.json({
-                success: true,
-                message: "Test users created successfully",
-                userCount: createdUsers.length,
-                users: createdUsers.map(user => ({
-                    username: user.username,
-                    id: user._id
+                users: users.map(user => ({
+                    id: user._id,
+                    username: user.username
                 }))
             });
         } catch (error) {
-            console.error("Error creating test users:", error);
+            console.error("Error checking User model:", error);
             res.status(500).json({
-                success: false,
                 error: error.message
             });
         }
     });
+
+    // Add test users route
+    app.post("/test-db/add-users", async (req, res) => {
+        // Route implementation
+    });
+
+
+// Debug Schema Route
+app.get("/debug-schema", async (req, res) => {  // Note: added async
+    try {
+        const postSchema = mongoose.model('Post').schema.obj;
+        const userSchema = mongoose.model('User').schema.obj;
+        
+        // Remove the problematic collectionStats section and replace with simpler collection info
+        res.json({
+            postSchema,
+            userSchema,
+            
+            // Model information
+            models: {
+                postModelName: Post.modelName,
+                userModelName: User.modelName,
+                postCollection: Post.collection.name,
+                userCollection: User.collection.name
+            },
+            
+            // Database connection info
+            database: {
+                name: mongoose.connection.name,
+                host: mongoose.connection.host,
+                port: mongoose.connection.port,
+                connected: mongoose.connection.readyState === 1
+            },
+            
+            // Collection info
+            collections: {
+                posts: {
+                    name: Post.collection.name,
+                    count: await Post.countDocuments()
+                },
+                users: {
+                    name: User.collection.name,
+                    count: await User.countDocuments()
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Debug Schema Error:', error);
+        res.status(500).json({
+            error: error.message,
+            stack: error.stack,
+            type: 'Schema Debug Error'
+        });
+    }
+});
+
+
+
 
     // Login routes
     app.get("/login", (req, res) => {
