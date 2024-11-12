@@ -63,6 +63,63 @@
             }
         }
 
+        // Function to handle reply submission
+        async function submitReply(postId, replyTextarea) {
+            try {
+                const content = replyTextarea.value;
+                if (!content.trim()) return;
+
+                const response = await fetch(`/post/${postId}/reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    replyTextarea.value = '';
+                    await loadPosts(); // Reload all posts to show the new reply
+                }
+            } catch (error) {
+                console.error('Failed to submit reply:', error);
+            }
+        }
+
+        // Function to create reply form
+        function createReplyForm(postId) {
+            const replyForm = document.createElement('div');
+            replyForm.className = 'reply-form';
+            replyForm.innerHTML = `
+                <textarea class="reply-textarea" placeholder="Write your reply..."></textarea>
+                <button class="reply-button">Reply</button>
+            `;
+
+            const textarea = replyForm.querySelector('.reply-textarea');
+            const button = replyForm.querySelector('.reply-button');
+            
+            button.addEventListener('click', () => submitReply(postId, textarea));
+            
+            return replyForm;
+        }
+
+        // Function to display replies
+        function displayReplies(replies) {
+            if (!replies || replies.length === 0) return '';
+            
+            return `
+                <div class="replies">
+                    ${replies.map(reply => `
+                        <div class="reply">
+                            <div class="reply-author">Reply by: ${reply.author.username}</div>
+                            <div class="reply-content">${reply.content}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
         // Function to load posts
         async function loadPosts() {
             try {
@@ -85,14 +142,15 @@
                         postContent += `<img src="${post.image}" alt="Post image">`;
                     }
 
-                    // Add replies section
-                    postContent += `
-                        <div class="replies">
-                            <!-- Replies will be added here -->
-                        </div>
-                    `;
+                    // Add existing replies
+                    postContent += displayReplies(post.replies);
 
                     postElement.innerHTML = postContent;
+
+                    // Add reply form
+                    const replyForm = createReplyForm(post._id);
+                    postElement.appendChild(replyForm);
+
                     postsContainer.appendChild(postElement);
                 });
             } catch (error) {
