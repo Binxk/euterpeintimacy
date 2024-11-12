@@ -64,7 +64,7 @@ mongoose.connect(process.env.MONGODB_URI)
 function setupSessions() {
     // Session configuration
     app.use(session({
-        secret: process.env.SESSION_SECRET,
+        secret: process.env.SESSION_SECRET || 'your-secret-key',
         resave: false,
         saveUninitialized: false,
         store: MongoStore.create({ 
@@ -73,7 +73,7 @@ function setupSessions() {
             autoRemove: "native"
         }),
         cookie: {
-            secure: process.env.NODE_ENV === 'production', // Only set to true if using HTTPS
+            secure: false,  // Changed to false for development
             httpOnly: true,
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
         }
@@ -81,6 +81,11 @@ function setupSessions() {
 }
 
 function setupRoutes() {
+    // Route for root path
+    app.get("/", (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+
     // Login routes
     app.get("/login", (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -211,7 +216,10 @@ function setupRoutes() {
             await post.save();
             console.log("Post saved successfully");
 
-            res.json({ success: true, post });
+            // Fetch the saved post with populated author
+            const savedPost = await Post.findById(post._id).populate('author', 'username');
+            res.json({ success: true, post: savedPost });
+
         } catch (error) {
             console.error("Detailed post creation error:", error);
             res.status(500).json({ error: "Failed to create post: " + error.message });
@@ -223,7 +231,7 @@ function setupRoutes() {
         try {
             const posts = await Post.find()
                 .populate('author', 'username')
-                .populate('replies.author', 'username') // Add population for reply authors
+                .populate('replies.author', 'username')
                 .sort({ createdAt: -1 });
             res.json(posts);
         } catch (error) {
@@ -256,7 +264,10 @@ function setupRoutes() {
                 }
             }
 
-            await post.remove();
+   
+
+
+await Post.findByIdAndDelete(req.params.postId);
             res.json({ success: true });
         } catch (error) {
             console.error("Delete post error:", error);
@@ -283,8 +294,7 @@ function setupRoutes() {
 
             await post.save();
             
-     
-// Fetch the updated post with populated authors
+            // Fetch the updated post with populated authors
             const updatedPost = await Post.findById(post._id)
                 .populate('author', 'username')
                 .populate('replies.author', 'username');
