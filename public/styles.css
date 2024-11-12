@@ -168,3 +168,32 @@ header {
     color: black;
     border: 1px solid black;
 }
+
+/* Add this to your styles.css */
+.euterpe-post {
+    background-color: black;
+    color: white;
+}
+
+.euterpe-post .reply {
+    color: white;
+}
+
+.euterpe-post .author {
+    color: white;
+}
+
+.euterpe-post .content {
+    color: white;
+}
+
+.euterpe-post .delete-btn {
+    background-color: white;
+    color: black;
+    border: 1px solid white;
+}
+
+.euterpe-post .delete-btn:hover {
+    background-color: black;
+    color: white;
+}

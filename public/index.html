@@ -135,52 +135,54 @@
             `;
         }
 
-        async function loadPosts() {
-            try {
-                const response = await fetch('/posts');
-                const posts = await response.json();
-                const postsContainer = document.getElementById('posts');
-                
-                // Get current user's username for comparison
-                const authResponse = await fetch('/check-session');
-                const authData = await authResponse.json();
-                const currentUser = authData.user?.username;
-                
-                postsContainer.innerHTML = '';
+async function loadPosts() {
+    try {
+        const response = await fetch('/posts');
+        const posts = await response.json();
+        const postsContainer = document.getElementById('posts');
+        
+        // Get current user's username for comparison
+        const authResponse = await fetch('/check-session');
+        const authData = await authResponse.json();
+        const currentUser = authData.user?.username;
+        
+        postsContainer.innerHTML = '';
 
-                posts.forEach(post => {
-                    const postElement = document.createElement('div');
-                    postElement.className = 'post';
-                    let postContent = `
-                        <div class="post-header">
-                            <h3>${post.title}</h3>
-                            ${post.author.username === currentUser ? 
-                                `<button class="delete-btn" onclick="deletePost('${post._id}')">Delete</button>` 
-                                : ''}
-                        </div>
-                        <div class="author">Posted by: ${post.author.username}</div>
-                        <div class="content">${post.content}</div>
-                    `;
-                    
-                    if (post.image) {
-                     postContent += `<img src="${post.image}" alt="Post image" class="post-image">`;
-                    }
-
-                    // Add existing replies
-                    postContent += displayReplies(post.replies);
-
-                    postElement.innerHTML = postContent;
-
-                    // Add reply form
-                    const replyForm = createReplyForm(post._id);
-                    postElement.appendChild(replyForm);
-
-                    postsContainer.appendChild(postElement);
-                });
-            } catch (error) {
-                console.error('Failed to load posts:', error);
+        posts.forEach(post => {
+            const postElement = document.createElement('div');
+            const isEuterpePost = post.author.username.toLowerCase() === 'euterpe';
+            postElement.className = `post ${isEuterpePost ? 'euterpe-post' : ''}`;
+            
+            let postContent = `
+                <div class="post-header">
+                    <h3>${post.title}</h3>
+                    ${post.author.username === currentUser ? 
+                        `<button class="delete-btn" onclick="deletePost('${post._id}')">Delete</button>` 
+                        : ''}
+                </div>
+                <div class="author">Posted by: ${post.author.username}</div>
+                <div class="content">${post.content}</div>
+            `;
+            
+            if (post.image) {
+                postContent += `<img src="${post.image}" alt="Post image" class="post-image">`;
             }
-        }
+
+            // Add existing replies
+            postContent += displayReplies(post.replies);
+
+            postElement.innerHTML = postContent;
+
+            // Add reply form
+            const replyForm = createReplyForm(post._id);
+            postElement.appendChild(replyForm);
+
+            postsContainer.appendChild(postElement);
+        });
+    } catch (error) {
+        console.error('Failed to load posts:', error);
+    }
+}
 
         // Handle form submission
         document.getElementById('create-post-form').addEventListener('submit', async (e) => {
