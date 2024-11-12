@@ -81,66 +81,66 @@ function setupSessions() {
 function setupRoutes() {
     // New Debug Database Route
     app.get("/debug-db", async (req, res) => {
-    try {
-        console.log("Entering /debug-db route");
+        try {
+            console.log("Entering /debug-db route");
 
-        // 1. Database connection info
-        const connectionState = mongoose.connection.readyState;
-        const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
-        console.log("MongoDB connection state:", states[connectionState]);
-        
-        // 2. List all collections
-        const collections = await mongoose.connection.db.listCollections().toArray();
-        console.log("MongoDB collections:", collections.map(c => c.name));
-        
-        // 3. Get counts from both collections
-        const userCount = await User.countDocuments();
-        const postCount = await Post.countDocuments();
-        console.log("User count:", userCount, "Post count:", postCount);
+            // 1. Database connection info
+            const connectionState = mongoose.connection.readyState;
+            const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+            console.log("MongoDB connection state:", states[connectionState]);
+            
+            // 2. List all collections
+            const collections = await mongoose.connection.db.listCollections().toArray();
+            console.log("MongoDB collections:", collections.map(c => c.name));
+            
+            // 3. Get counts from both collections
+            const userCount = await User.countDocuments();
+            const postCount = await Post.countDocuments();
+            console.log("User count:", userCount, "Post count:", postCount);
 
-        // 4. Try to create a test user if none exist
-        let testUserResult = null;
-        if (userCount === 0) {
-            console.log("No users found, creating a test user");
-            const testUser = new User({
-                username: `test_${Date.now()}`,
-                password: "test123"
+            // 4. Try to create a test user if none exist
+            let testUserResult = null;
+            if (userCount === 0) {
+                console.log("No users found, creating a test user");
+                const testUser = new User({
+                    username: `test_${Date.now()}`,
+                    password: "test123"
+                });
+                testUserResult = await testUser.save();
+                console.log("Test user created:", testUserResult);
+            }
+
+            // 5. Get one user sample if any exist
+            const sampleUser = await User.findOne({});
+            console.log("Sample user:", sampleUser);
+
+            res.json({
+                connection: {
+                    state: states[connectionState],
+                    host: mongoose.connection.host,
+                    name: mongoose.connection.name,
+                    port: mongoose.connection.port
+                },
+                collections: collections.map(c => c.name),
+                counts: {
+                    users: userCount,
+                    posts: postCount
+                },
+                testUser: testUserResult,
+                sampleUser: sampleUser ? {
+                    id: sampleUser._id,
+                    username: sampleUser.username,
+                    created: sampleUser.createdAt
+                } : null
             });
-            testUserResult = await testUser.save();
-            console.log("Test user created:", testUserResult);
+        } catch (error) {
+            console.error("Error in /debug-db route:", error);
+            res.status(500).json({
+                error: error.message,
+                stack: error.stack
+            });
         }
-
-        // 5. Get one user sample if any exist
-        const sampleUser = await User.findOne({});
-        console.log("Sample user:", sampleUser);
-
-        res.json({
-            connection: {
-                state: states[connectionState],
-                host: mongoose.connection.host,
-                name: mongoose.connection.name,
-                port: mongoose.connection.port
-            },
-            collections: collections.map(c => c.name),
-            counts: {
-                users: userCount,
-                posts: postCount
-            },
-            testUser: testUserResult,
-            sampleUser: sampleUser ? {
-                id: sampleUser._id,
-                username: sampleUser.username,
-                created: sampleUser.createdAt
-            } : null
-        });
-    } catch (error) {
-        console.error("Error in /debug-db route:", error);
-        res.status(500).json({
-            error: error.message,
-            stack: error.stack
-        });
-    }
-});
+    });
 
     // Test DB route
     app.get("/test-db", async (req, res) => {
