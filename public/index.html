@@ -41,6 +41,7 @@
             checkAuth();
             loadPosts();
             setupPostForm();
+            handleLogout();
         });
 
         function checkAuth() {
@@ -53,6 +54,7 @@
                     window.location.href = '/login.html';
                 } else {
                     document.getElementById('username').textContent = data.user.username;
+                    userId = data.user.userId; // Store the user ID for later use
                 }
             })
             .catch(() => window.location.href = '/login.html');
@@ -117,6 +119,11 @@
                             <textarea placeholder="Write a reply..."></textarea>
                             <button onclick="addReply('${post._id}', this)">Reply</button>
                         </div>
+                        ${post.author._id === userId ? `
+                            <div class="delete-post">
+                                <button onclick="deletePost('${post._id}')">Delete Post</button>
+                            </div>
+                        ` : ''}
                     </div>
                 `).join('');
             });
@@ -143,14 +150,32 @@
             .catch(error => console.error('Error:', error));
         }
 
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            fetch('/logout', {
-                method: 'POST',
+        function deletePost(postId) {
+            fetch(`/posts/${postId}`, {
+                method: 'DELETE',
                 credentials: 'include'
             })
-            .then(() => window.location.href = '/login.html')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadPosts();
+                } else {
+                    alert(data.error || 'Failed to delete post');
+                }
+            })
             .catch(error => console.error('Error:', error));
-        });
+        }
+
+        function handleLogout() {
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                fetch('/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                })
+                .then(() => window.location.href = '/login.html')
+                .catch(error => console.error('Error:', error));
+            });
+        }
     </script>
 </body>
 </html>
