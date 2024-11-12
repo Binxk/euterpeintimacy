@@ -43,6 +43,8 @@ app.use((req, res, next) => {
 // Middleware setup
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+// Add specific route for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // MongoDB connection
 console.log("Attempting MongoDB connection...");
@@ -71,7 +73,7 @@ function setupSessions() {
             autoRemove: "native"
         }),
         cookie: {
-            secure: true, // Set to true to only send cookie over HTTPS
+            secure: process.env.NODE_ENV === 'production', // Only set to true if using HTTPS
             httpOnly: true,
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
         }
@@ -221,6 +223,7 @@ function setupRoutes() {
         try {
             const posts = await Post.find()
                 .populate('author', 'username')
+                .populate('replies.author', 'username') // Add population for reply authors
                 .sort({ createdAt: -1 });
             res.json(posts);
         } catch (error) {
@@ -245,9 +248,18 @@ function setupRoutes() {
                 return res.status(403).json({ error: "You are not authorized to delete this post" });
             }
 
+            // If post has an image, delete it from the uploads folder
+            if (post.image) {
+                const imagePath = path.join(__dirname, 'public', post.image);
+                if (fs.existsSync(imagePath)) {
+                    fs.unlinkSync(imagePath);
+                }
+            }
+
             await post.remove();
             res.json({ success: true });
         } catch (error) {
+            console.error("Delete post error:", error);
             res.status(500).json({ error: "Failed to delete post" });
         }
     });
@@ -270,8 +282,16 @@ function setupRoutes() {
             });
 
             await post.save();
-            res.json({ success: true, post });
+            
+     
+// Fetch the updated post with populated authors
+            const updatedPost = await Post.findById(post._id)
+                .populate('author', 'username')
+                .populate('replies.author', 'username');
+
+            res.json({ success: true, post: updatedPost });
         } catch (error) {
+            console.error("Reply error:", error);
             res.status(500).json({ error: "Failed to add reply" });
         }
     });
