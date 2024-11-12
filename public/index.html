@@ -4,153 +4,207 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Message Board</title>
-    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        #user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .post-form {
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .posts-container {
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .post {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .post-reply {
+            margin-left: 20px;
+            padding: 10px;
+            border-left: 2px solid #eee;
+            margin-top: 10px;
+        }
+
+        .reply-content {
+            margin-bottom: 5px;
+        }
+
+        .reply-content small {
+            color: #666;
+            font-size: 0.8em;
+        }
+
+        .reply-form {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .reply-text {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header>
+        <div>
             <h1>Message Board</h1>
+
             <div id="user-info">
-                Logged in as: <span id="username"></span>
-                <button id="logout-btn">Logout</button>
+                <span>Logged in as: <span id="username">JohnDoe</span></span>
+                <button onclick="logout()">Logout</button>
             </div>
-        </header>
-        
+        </div>
+
         <div class="post-form">
-            <form id="postForm">
-                <div class="form-group">
-                    <input type="text" id="title" placeholder="Post title" required>
-                </div>
-                <div class="form-group">
-                    <textarea id="content" placeholder="Write your post..." required></textarea>
-                </div>
-                <div class="form-group">
-                    <input type="file" id="image" accept="image/*">
-                </div>
-                <button type="submit">Create Post</button>
-            </form>
+            <div class="form-group">
+                <input type="text" id="post-title" placeholder="Post Title">
+            </div>
+
+            <div class="form-group">
+                <textarea id="post-content" placeholder="Write your post here..." rows="4"></textarea>
+            </div>
+
+            <div class="form-group">
+                <button onclick="createPost()">Create Post</button>
+            </div>
         </div>
 
         <div id="posts" class="posts-container">
-            <!-- Posts will be displayed here -->
+            <!-- Posts will be dynamically added here -->
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth();
-            loadPosts();
-            setupPostForm();
-        });
+        // Get username element and store username
+        const usernameElement = document.querySelector('#username');
+        let currentUsername = usernameElement.textContent || 'Anonymous';
 
-        function checkAuth() {
-            fetch('/check-session', {
-                credentials: 'include'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.authenticated) {
-                    window.location.href = '/login.html';
-                } else {
-                    document.getElementById('username').textContent = data.user.username;
-                }
-            })
-            .catch(() => window.location.href = '/login.html');
+        // Function to create a new post
+        function createPost() {
+            const title = document.getElementById('post-title').value;
+            const content = document.getElementById('post-content').value;
+            
+            if (!title.trim() || !content.trim()) {
+                alert('Please fill in both title and content');
+                return;
+            }
+
+            const postId = 'post-' + Date.now();
+            const post = document.createElement('div');
+            post.className = 'post';
+            post.id = postId;
+            
+            post.innerHTML = `
+                <h3>${title}</h3>
+                <p>${content}</p>
+                <small>Posted by ${currentUsername} - ${new Date().toLocaleString()}</small>
+                <div class="reply-form">
+                    <textarea class="reply-text" placeholder="Write a reply..."></textarea>
+                    <button onclick="submitReply('${postId}')">Reply</button>
+                </div>
+                <div class="replies"></div>
+            `;
+
+            document.getElementById('posts').prepend(post);
+            
+            // Clear the form
+            document.getElementById('post-title').value = '';
+            document.getElementById('post-content').value = '';
         }
 
-        function setupPostForm() {
-            document.getElementById('postForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const formData = new FormData();
-                formData.append('title', document.getElementById('title').value);
-                formData.append('content', document.getElementById('content').value);
-                
-                const imageFile = document.getElementById('image').files[0];
-                if (imageFile) {
-                    formData.append('image', imageFile);
-                }
+        // Function to submit a reply
+        function submitReply(postId) {
+            const post = document.getElementById(postId);
+            const replyText = post.querySelector('.reply-text').value;
+            
+            if (!replyText.trim()) {
+                alert('Please write a reply before submitting');
+                return;
+            }
 
-                try {
-                    const response = await fetch('/post', {
-                        method: 'POST',
-                        credentials: 'include',
-                        body: formData
-                    });
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        document.getElementById('postForm').reset();
-                        loadPosts();
-                    } else {
-                        alert(data.error || 'Failed to create post');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Failed to create post');
-                }
-            });
+            createReply(postId, replyText);
+            post.querySelector('.reply-text').value = '';
         }
 
-        function loadPosts() {
-            fetch('/posts', {
-                credentials: 'include'
-            })
-            .then(response => response.json())
-            .then(posts => {
-                const postsContainer = document.getElementById('posts');
-                postsContainer.innerHTML = posts.map(post => `
-                    <div class="post">
-                        <h3>${post.title}</h3>
-                        <p class="author">Posted by ${post.author.username}</p>
-                        <p class="content">${post.content}</p>
-                        ${post.image ? `<img src="${post.image}" alt="Post image">` : ''}
-                        <div class="replies">
-                            ${post.replies.map(reply => `
-                                <div class="reply">
-                                    <p>${reply.content}</p>
-                                    <small>Reply by ${reply.author.username}</small>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="reply-form">
-                            <textarea placeholder="Write a reply..."></textarea>
-                            <button onclick="addReply('${post._id}', this)">Reply</button>
-                        </div>
-                    </div>
-                `).join('');
-            });
+        // Function to create a new reply
+        function createReply(postId, replyText) {
+            const reply = document.createElement('div');
+            reply.className = 'post-reply';
+            
+            // Get current timestamp
+            const timestamp = new Date().toLocaleString();
+            
+            // Create reply content with proper username attribution
+            reply.innerHTML = `
+                <div class="reply-content">
+                    <p>${replyText}</p>
+                    <small>Reply by ${currentUsername} - ${timestamp}</small>
+                </div>
+            `;
+            
+            // Find the target post and append reply
+            const targetPost = document.querySelector(`#${postId}`);
+            if (targetPost) {
+                const repliesContainer = targetPost.querySelector('.replies');
+                repliesContainer.appendChild(reply);
+            }
         }
 
-        function addReply(postId, button) {
-            const replyContent = button.previousElementSibling.value;
-            if (!replyContent.trim()) return;
-
-            fetch(`/post/${postId}/reply`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({ content: replyContent })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    loadPosts();
-                }
-            })
-            .catch(error => console.error('Error:', error));
+        // Logout function
+        function logout() {
+            // Add your logout logic here
+            alert('Logout functionality to be implemented');
         }
-
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            fetch('/logout', {
-                method: 'POST',
-                credentials: 'include'
-            })
-            .then(() => window.location.href = '/login.html')
-            .catch(error => console.error('Error:', error));
-        });
     </script>
 </body>
 </html>
