@@ -4,36 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Euterpe's Intimacy</title>
-    <style>
-        .posts-container {
-            max-width: 800px;
-            margin: 10px auto;
-        }
-        .post {
-            border: 1px solid #000000;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        #post-form {
-            border: 1px solid #000000;
-            padding: 20px;
-            margin: 20px auto;
-            max-width: 800px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>Euterpe's Intimacy</h1>
-
-        <div id="user-info">
-            <div>
-                Logged in as: <span id="username"></span>
+        <header>
+            <h1>Euterpe's Intimacy</h1>
+            <div id="user-info">
+                <span>Logged in as: <span id="username"></span></span>
+                <button id="logout-btn" onclick="logout()">Logout</button>
             </div>
-            <button onclick="logout()">Logout</button>
-        </div>
+        </header>
 
-        <div id="post-form">
+        <div class="post-form">
             <h2>Create Your Post</h2>
             <form id="create-post-form" enctype="multipart/form-data">
                 <div class="form-group">
@@ -49,7 +32,7 @@
             </form>
         </div>
 
-        <div id="posts" class="posts-container">
+        <div id="posts">
             <!-- Posts will be dynamically inserted here -->
         </div>
     </div>
@@ -93,14 +76,21 @@
                     postElement.className = 'post';
                     let postContent = `
                         <h3>${post.title}</h3>
-                        <p>${post.content}</p>
-                        <p>Posted by: ${post.author.username}</p>
+                        <div class="author">Posted by: ${post.author.username}</div>
+                        <div class="content">${post.content}</div>
                     `;
                     
                     // Add image if present
                     if (post.image) {
-                        postContent += `<img src="${post.image}" alt="Post image" class="post-image">`;
+                        postContent += `<img src="${post.image}" alt="Post image">`;
                     }
+
+                    // Add replies section
+                    postContent += `
+                        <div class="replies">
+                            <!-- Replies will be added here -->
+                        </div>
+                    `;
 
                     postElement.innerHTML = postContent;
                     postsContainer.appendChild(postElement);
