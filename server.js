@@ -8,12 +8,19 @@ const multer = require("multer");
 const { User, Post } = require("./models/User");
 const path = require("path");
 const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
 const app = express();
+
+// Cloudinary configuration
+cloudinary.config({ 
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
+    api_key: process.env.CLOUDINARY_API_KEY, 
+    api_secret: process.env.CLOUDINARY_API_SECRET 
+});
 
 // Multer configuration
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        // Create directory if it doesn't exist
         if (!fs.existsSync('public/uploads/')) {
             fs.mkdirSync('public/uploads/', { recursive: true });
         }
@@ -23,10 +30,10 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + '-' + file.originalname);
     }
 });
+
 const upload = multer({ 
     storage: storage,
     fileFilter: function (req, file, cb) {
-        // Accept images only
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
             return cb(new Error('Only image files are allowed!'), false);
         }
@@ -43,7 +50,6 @@ app.use((req, res, next) => {
 // Middleware setup
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-// Add specific route for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // MongoDB connection
@@ -51,8 +57,6 @@ console.log("Attempting MongoDB connection...");
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => {
         console.log("MongoDB connected successfully");
-        
-        // Only set up sessions after MongoDB connects
         setupSessions();
         setupRoutes();
     })
@@ -62,7 +66,6 @@ mongoose.connect(process.env.MONGODB_URI)
     });
 
 function setupSessions() {
-    // Session configuration
     app.use(session({
         secret: process.env.SESSION_SECRET || 'your-secret-key',
         resave: false,
@@ -73,20 +76,18 @@ function setupSessions() {
             autoRemove: "native"
         }),
         cookie: {
-            secure: false,  // Changed to false for development
+            secure: false,
             httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: 24 * 60 * 60 * 1000
         }
     }));
 }
 
 function setupRoutes() {
-    // Route for root path
     app.get("/", (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
     });
 
-    // Login routes
     app.get("/login", (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'login.html'));
     });
@@ -114,8 +115,6 @@ function setupRoutes() {
                 username: user.username
             };
 
-            console.log("Session after login:", req.session);
-            
             res.json({ 
                 success: true, 
                 user: { username: user.username }
@@ -126,9 +125,7 @@ function setupRoutes() {
         }
     });
 
-    // Session check route
     app.get("/check-session", (req, res) => {
-        console.log("Checking session:", req.session);
         if (req.session && req.session.userId) {
             res.json({ 
                 authenticated: true,
@@ -142,7 +139,6 @@ function setupRoutes() {
         }
     });
 
-    // Signup route
     app.post("/signup", async (req, res) => {
         try {
             const { username, password } = req.body;
@@ -178,7 +174,6 @@ function setupRoutes() {
         }
     });
 
-    // Logout route
     app.post("/logout", (req, res) => {
         req.session.destroy(err => {
             if (err) {
@@ -189,44 +184,35 @@ function setupRoutes() {
         });
     });
 
-    // Post routes
     app.post("/post", upload.single('image'), async (req, res) => {
         try {
-            console.log("Request body:", req.body);
-            console.log("Session:", req.session);
-            console.log("Uploaded file:", req.file);
-
             if (!req.session.userId) {
-                console.log("No user session found");
                 return res.status(401).json({ error: "Not authenticated" });
             }
 
-            const { title, content } = req.body;
-            console.log("Creating post with title:", title, "content:", content);
+            let imageUrl;
+            if (req.file) {
+                const result = await cloudinary.uploader.upload(req.file.path);
+                imageUrl = result.secure_url;
+                fs.unlinkSync(req.file.path);
+            }
 
             const post = new Post({
-                title,
-                content,
+                title: req.body.title,
+                content: req.body.content,
                 author: req.session.userId,
-                image: req.file ? '/uploads/' + req.file.filename : undefined
+                image: imageUrl
             });
 
-            console.log("Post object before save:", post);
-
             await post.save();
-            console.log("Post saved successfully");
-
-            // Fetch the saved post with populated author
             const savedPost = await Post.findById(post._id).populate('author', 'username');
             res.json({ success: true, post: savedPost });
-
         } catch (error) {
-            console.error("Detailed post creation error:", error);
-            res.status(500).json({ error: "Failed to create post: " + error.message });
+            console.error("Post creation error:", error);
+            res.status(500).json({ error: "Failed to create post" });
         }
     });
 
-    // Get posts route
     app.get("/posts", async (req, res) => {
         try {
             const posts = await Post.find()
@@ -239,7 +225,6 @@ function setupRoutes() {
         }
     });
 
-    // Delete post route
     app.delete("/posts/:postId", async (req, res) => {
         try {
             if (!req.session.userId) {
@@ -251,23 +236,17 @@ function setupRoutes() {
                 return res.status(404).json({ error: "Post not found" });
             }
 
-            // Check if the user is the author of the post
             if (post.author.toString() !== req.session.userId) {
-                return res.status(403).json({ error: "You are not authorized to delete this post" });
+                return res.status(403).json({ error: "Not authorized to delete this post" });
             }
 
-            // If post has an image, delete it from the uploads folder
-            if (post.image) {
-                const imagePath = path.join(__dirname, 'public', post.image);
-                if (fs.existsSync(imagePath)) {
-                    fs.unlinkSync(imagePath);
-                }
+            // Delete image from Cloudinary if it exists
+            if (post.image && post.image.includes('cloudinary')) {
+                const publicId = post.image.split('/').pop().split('.')[0];
+                await cloudinary.uploader.destroy(publicId);
             }
 
-   
-
-
-await Post.findByIdAndDelete(req.params.postId);
+            await Post.findByIdAndDelete(req.params.postId);
             res.json({ success: true });
         } catch (error) {
             console.error("Delete post error:", error);
@@ -275,7 +254,6 @@ await Post.findByIdAndDelete(req.params.postId);
         }
     });
 
-    // Add reply to post
     app.post("/post/:postId/reply", async (req, res) => {
         try {
             if (!req.session.userId) {
@@ -294,7 +272,6 @@ await Post.findByIdAndDelete(req.params.postId);
 
             await post.save();
             
-            // Fetch the updated post with populated authors
             const updatedPost = await Post.findById(post._id)
                 .populate('author', 'username')
                 .populate('replies.author', 'username');
