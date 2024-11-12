@@ -3,24 +3,46 @@
 <head>
     <title>Message Board</title>
     <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
         .post {
             border: 1px solid #ccc;
             margin: 10px 0;
             padding: 15px;
+            border-radius: 5px;
+            background-color: #fff;
         }
         .post-image {
-            max-width: 300px;
+            max-width: 100%;
+            height: auto;
             margin: 10px 0;
+            border-radius: 5px;
         }
         .delete-btn {
             float: right;
             color: red;
             cursor: pointer;
+            padding: 5px 10px;
+            border: 1px solid red;
+            border-radius: 3px;
+        }
+        .delete-btn:hover {
+            background-color: #ffebeb;
         }
         .replies {
             margin-left: 20px;
             border-left: 2px solid #ccc;
             padding-left: 10px;
+            margin-top: 10px;
+        }
+        .reply {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #f9f9f9;
+            border-radius: 3px;
         }
         .form-group {
             margin: 10px 0;
@@ -29,30 +51,56 @@
             width: 100%;
             padding: 8px;
             margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+        textarea {
+            min-height: 100px;
         }
         #user-info {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        .post-meta {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
         }
         .reply-form {
             margin-top: 10px;
+        }
+        .reply-form input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div>
-            <h1>Message Board</h1>
+            <h1>Community Message Board</h1>
 
             <div id="user-info">
-                Logged in as: <span id="username"></span>
+                <div>
+                    Logged in as: <strong><span id="username"></span></strong>
+                </div>
                 <button onclick="logout()">Logout</button>
             </div>
 
@@ -63,7 +111,7 @@
                         <input type="text" id="post-title" name="title" placeholder="Title" required>
                     </div>
                     <div class="form-group">
-                        <textarea id="post-content" name="content" placeholder="Content" required></textarea>
+                        <textarea id="post-content" name="content" placeholder="Share your thoughts..." required></textarea>
                     </div>
                     <div class="form-group">
                         <input type="file" id="post-image" name="image" accept="image/*">
@@ -72,6 +120,7 @@
                 </form>
             </div>
 
+            <h2>All Posts</h2>
             <div id="posts" class="posts-container"></div>
         </div>
     </div>
@@ -103,6 +152,11 @@
                 const postsContainer = document.getElementById('posts');
                 postsContainer.innerHTML = '';
                 
+                if (posts.length === 0) {
+                    postsContainer.innerHTML = '<p>No posts yet. Be the first to share something!</p>';
+                    return;
+                }
+
                 posts.forEach(post => {
                     const postElement = document.createElement('div');
                     postElement.className = 'post';
@@ -120,9 +174,10 @@
                     // Format replies with proper author names
                     const repliesHtml = post.replies && post.replies.length > 0
                         ? `<div class="replies">
+                            <h4>Replies:</h4>
                             ${post.replies.map(reply => `
                                 <div class="reply">
-                                    <p><strong>Reply by ${reply.author ? reply.author.username : 'Unknown'}</strong>: ${reply.content}</p>
+                                    <p><strong>${reply.author ? reply.author.username : 'Unknown'}</strong>: ${reply.content}</p>
                                 </div>
                             `).join('')}
                            </div>`
@@ -130,7 +185,10 @@
 
                     postElement.innerHTML = `
                         <h3>${post.title} ${deleteButton}</h3>
-                        <p><strong>By ${post.author.username}</strong></p>
+                        <div class="post-meta">
+                            Posted by <strong>${post.author.username}</strong>
+                            ${post.createdAt ? `on ${new Date(post.createdAt).toLocaleDateString()}` : ''}
+                        </div>
                         <p>${post.content}</p>
                         ${imageHtml}
                         ${repliesHtml}
@@ -142,6 +200,10 @@
                     
                     postsContainer.appendChild(postElement);
                 });
+            })
+            .catch(error => {
+                console.error('Error loading posts:', error);
+                document.getElementById('posts').innerHTML = '<p>Error loading posts. Please try refreshing the page.</p>';
             });
         }
 
@@ -161,6 +223,10 @@
                     this.reset();
                     loadPosts();
                 }
+            })
+            .catch(error => {
+                console.error('Error creating post:', error);
+                alert('Failed to create post. Please try again.');
             });
         };
 
@@ -176,12 +242,18 @@
                     if (data.success) {
                         loadPosts();
                     }
+                })
+                .catch(error => {
+                    console.error('Error deleting post:', error);
+                    alert('Failed to delete post. Please try again.');
                 });
             }
         }
 
         // Add reply
         function addReply(postId, input) {
+            if (!input.value.trim()) return;
+
             fetch(`/post/${postId}/reply`, {
                 method: 'POST',
                 credentials: 'include',
@@ -196,6 +268,10 @@
                     input.value = '';
                     loadPosts();
                 }
+            })
+            .catch(error => {
+                console.error('Error adding reply:', error);
+                alert('Failed to add reply. Please try again.');
             });
         }
 
@@ -210,6 +286,10 @@
                 if (data.success) {
                     window.location.href = '/login';
                 }
+            })
+            .catch(error => {
+                console.error('Error logging out:', error);
+                alert('Failed to logout. Please try again.');
             });
         }
 
