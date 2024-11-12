@@ -5,7 +5,7 @@
 }
 
 body {
-    font-family: 'Times New Roman', Times, serif;
+    font-family: 'Arial', sans-serif;
     line-height: 1.6;
     background-color: white;
     color: black;
@@ -14,15 +14,15 @@ body {
 .container {
     max-width: 800px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 2rem;
 }
 
 header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 20px;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid black;
 }
 
@@ -32,10 +32,27 @@ header {
     gap: 10px;
 }
 
-.container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem;
+.post-form {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border: 1px solid black;
+}
+
+.post-form h2 {
+    font-family: 'Times New Roman', Times, serif;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid black;
+    font-family: 'Arial', sans-serif;
 }
 
 .post {
@@ -45,6 +62,7 @@ header {
 }
 
 .post h3 {
+    font-family: 'Times New Roman', Times, serif;
     margin-top: 0;
 }
 
@@ -93,4 +111,14 @@ header {
 .post .delete-post {
     text-align: right;
     margin-top: 1rem;
+}
+
+#logout-btn {
+    background-color: black;
+    color: white;
+}
+
+#logout-btn:hover {
+    background-color: white;
+    color: black;
 }
