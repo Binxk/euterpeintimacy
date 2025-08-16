@@ -169,29 +169,81 @@ async function loadPosts() {
 }
 
 // ---------- Create Post (with image) ----------
+
 function attachCreatePostHandler() {
   const form = document.getElementById('create-post-form');
   if (!form) return;
 
   const submitBtn = form.querySelector('button[type="submit"]');
 
+  // helper: shrink/compress image with canvas
+  async function shrinkImage(file, { maxW = 1280, maxH = 1280, mime = 'image/jpeg', quality = 0.82 } = {}) {
+    const img = new Image();
+    const reader = new FileReader();
+    const loaded = new Promise((resolve, reject) => {
+      reader.onload = () => { img.src = reader.result; };
+      reader.onerror = reject;
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+    reader.readAsDataURL(file);
+    await loaded;
+
+    let { width, height } = img;
+    const ratio = Math.min(maxW / width, maxH / height, 1);
+    const w = Math.round(width * ratio);
+    const h = Math.round(height * ratio);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const outType = mime || (file.type === 'image/png' ? 'image/jpeg' : file.type);
+    const blob = await new Promise(res => canvas.toBlob(res, outType, quality));
+    return blob || file;
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Posting...'; }
 
-    const fd = new FormData(form); // reads title, content, image directly
-
     try {
-      const res = await fetch('/post', { method: 'POST', body: fd });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.success) {
-        throw new Error(data?.error || `Failed (${res.status})`);
+      const fd = new FormData(form);
+
+      // file checks + optional shrink
+      const MAX_BYTES = 5 * 1024 * 1024; // 5MB cap 
+      const fileInput = form.querySelector('#image');
+      let file = fileInput?.files?.[0];
+
+      if (file) {
+        // if too big, auto-shrink (and convert PNG→JPEG for better compression)
+        if (file.size > MAX_BYTES) {
+          alert('Image is large—optimizing it before upload…');
+          file = await shrinkImage(file, { maxW: 1280, maxH: 1280, mime: 'image/jpeg', quality: 0.82 });
+        }
+        // replace the original file in FormData (use .set to overwrite)
+        const newName = (file.name || 'upload').replace(/\.(png|webp|heic|heif)$/i, '.jpg');
+        fd.set('image', file, newName);
       }
+
+      const res = await fetch('/post', { method: 'POST', body: fd });
+
+      // show actual error details for debugging
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('POST /post failed:', res.status, text);
+        throw new Error(text || `Failed (${res.status})`);
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (!data?.success) throw new Error(data?.error || 'Failed to create post');
+
       form.reset();
       await loadPosts();
-    } catch (e) {
-      console.error('[create-post] error', e);
-      alert(e.message || 'Failed to create post');
+    } catch (err) {
+      console.error('[create-post] error', err);
+      alert(err.message || 'Failed to create post');
     } finally {
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create Post'; }
     }
