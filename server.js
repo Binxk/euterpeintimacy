@@ -157,39 +157,46 @@ function setupRoutes() {
     });
 
     // Create a post (with optional image)
-    app.post("/post", upload.single("image"), async (req, res) => {
-        try {
-            if (!req.session.userId) {
-                return res.status(401).json({ error: "Not authenticated" });
-            }
-
-            // Multer file check
-            if (req.file) {
-                try {
-                    const result = await cloudinary.uploader.upload(req.file.path);
-                    req.body.image = result.secure_url;
-                    fs.unlinkSync(req.file.path); // Remove local file
-                } catch (err) {
-                    console.error("Cloudinary upload failed:", err);
-                    return res.status(500).json({ error: "Image upload failed." });
-                }
-            }
-
-            const post = new Post({
-                title: req.body.title,
-                content: req.body.content,
-                author: req.session.userId,
-                image: req.body.image
-            });
-            await post.save();
-            const savedPost = await Post.findById(post._id).populate("author", "username");
-            res.json({ success: true, post: savedPost });
-        } catch (error) {
-            console.error("Post creation error:", error);
-            res.status(500).json({ error: error.message || "Failed to create post" });
+  app.post("/post", upload.single("image"), async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            console.error("Not authenticated");
+            return res.status(401).json({ error: "Not authenticated" });
         }
-    });
 
+        console.log("POST /post body:", req.body);
+        console.log("POST /post file:", req.file);
+
+        let imageUrl = undefined;
+        if (req.file) {
+            try {
+                const result = await cloudinary.uploader.upload(req.file.path);
+                imageUrl = result.secure_url;
+                fs.unlinkSync(req.file.path); // Remove local file
+                console.log("Cloudinary upload result:", result);
+            } catch (err) {
+                console.error("Cloudinary upload failed:", err);
+                return res.status(500).json({ error: "Image upload failed." });
+            }
+        }
+
+        const postData = {
+            title: req.body.title,
+            content: req.body.content,
+            author: req.session.userId,
+            image: imageUrl
+        };
+        console.log("New Post data:", postData);
+
+        const post = new Post(postData);
+        await post.save();
+        const savedPost = await Post.findById(post._id).populate("author", "username");
+        res.json({ success: true, post: savedPost });
+    } catch (error) {
+        console.error("Post creation error:", error);
+        res.status(500).json({ error: error.message || error.toString() || "Failed to create post" });
+    }
+});
     // Get all posts
     app.get("/posts", async (req, res) => {
         try {
