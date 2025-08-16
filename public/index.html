@@ -102,23 +102,20 @@
             } catch (error) {
                 console.error('Failed to submit reply:', error);
             }
-        }
+        
+function createReplyForm(postId) {
+  const replyForm = document.createElement('div');
+  replyForm.className = 'reply-form';
+  replyForm.innerHTML = `
+    <textarea class="reply-textarea" placeholder="Write your reply..."></textarea>
+    <button type="button" class="reply-button">Reply</button>
+  `;
 
-        function createReplyForm(postId) {
-            const replyForm = document.createElement('div');
-            replyForm.className = 'reply-form';
-            replyForm.innerHTML = `
-                <textarea class="reply-textarea" placeholder="Write your reply..."></textarea>
-                <button class="reply-button">Reply</button>
-            `;
-
-            const textarea = replyForm.querySelector('.reply-textarea');
-            const button = replyForm.querySelector('.reply-button');
-            
-            button.addEventListener('click', () => submitReply(postId, textarea));
-            
-            return replyForm;
-        }
+  const textarea = replyForm.querySelector('.reply-textarea');
+  const button = replyForm.querySelector('.reply-button');
+  button.addEventListener('click', () => submitReply(postId, textarea));
+  return replyForm;
+}
 
         function displayReplies(replies) {
             if (!replies || replies.length === 0) return '';
