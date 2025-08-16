@@ -200,16 +200,10 @@ header {
 
 
 
-#postForm { 
-  display: grid; 
-  gap: 12px; 
-}
+#create-post-form { display: grid; gap: 12px; }
 
-.post-form .form-group { 
-  position: relative; 
-}
+.post-form .form-group { position: relative; }
 
-.post-form label[for="image"],
 .post-form input[type="file"] {
   position: relative;   /* not absolute */
   display: block;
@@ -217,11 +211,21 @@ header {
   z-index: 1;
 }
 
+/* Keep the submit button above nearby elements */
 .post-form button[type="submit"] {
   position: relative;
-  z-index: 2; /* makes sure it's above the file input */
+  z-index: 2;
 }
 
+/* Prevent large images in posts from overlapping later content */
+.post-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 10px;
+}
+
+/* If you use floats anywhere, clear them */
 .post-form .form-group::after {
   content: "";
   display: block;
