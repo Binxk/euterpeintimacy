@@ -231,3 +231,16 @@ header {
   display: block;
   clear: both;
 }
+
+
+
+.container { position: relative; }
+.post-form { position: relative; z-index: 10; isolation: isolate; } /* new stacking context */
+#posts { position: relative; z-index: 0; }
+
+#create-post-form { display: grid; gap: 12px; position: relative; }
+.post-form .form-group { position: relative; z-index: 1; }
+.post-form input[type="file"] { position: relative; z-index: 1; display: block; max-width: 100%; }
+.post-form button[type="submit"] { position: relative; z-index: 9999; pointer-events: auto; }
+
+#posts.debug-disable-pointer-events { pointer-events: none; }
