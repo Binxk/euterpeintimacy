@@ -197,3 +197,33 @@ header {
     background-color: black;
     color: white;
 }
+
+
+
+#postForm { 
+  display: grid; 
+  gap: 12px; 
+}
+
+.post-form .form-group { 
+  position: relative; 
+}
+
+.post-form label[for="image"],
+.post-form input[type="file"] {
+  position: relative;   /* not absolute */
+  display: block;
+  max-width: 100%;
+  z-index: 1;
+}
+
+.post-form button[type="submit"] {
+  position: relative;
+  z-index: 2; /* makes sure it's above the file input */
+}
+
+.post-form .form-group::after {
+  content: "";
+  display: block;
+  clear: both;
+}
