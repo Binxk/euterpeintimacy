@@ -1,215 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euterpe's Intimacy</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Euterpe's Intimacy</title>
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Euterpe's Intimacy</h1>
-            <div id="user-info">
-                <span>Logged in as: <span id="username"></span></span>
-                <button id="logout-btn" onclick="logout()">Logout</button>
-            </div>
-        </header>
+  <div class="container">
+    <header>
+      <h1>Euterpe's Intimacy</h1>
+      <div id="user-info">
+        <span>Logged in as: <span id="username"></span></span>
+        <!-- no inline onclick here -->
+        <button id="logout-btn">Logout</button>
+      </div>
+    </header>
 
-        <div class="post-form">
-            <h2>Create Your Post</h2>
-            <form id="create-post-form" enctype="multipart/form-data">
-                <div class="form-group">
-                    <input type="text" id="title" name="title" placeholder="Title" required>
-                </div>
-                <div class="form-group">
-                    <textarea id="content" name="content" placeholder="Content" required></textarea>
-                </div>
-                <div class="form-group">
-                    <input type="file" id="image" name="image" accept="image/*">
-                </div>
-                <button type="submit">Create Post</button>
-            </form>
+    <div class="post-form">
+      <h2>Create Your Post</h2>
+      <form id="create-post-form" enctype="multipart/form-data">
+        <div class="form-group">
+          <input type="text" id="title" name="title" placeholder="Title" required/>
         </div>
-
-        <div id="posts">
-            <!-- Posts will be dynamically inserted here -->
+        <div class="form-group">
+          <textarea id="content" name="content" placeholder="Content" required></textarea>
         </div>
+        <div class="form-group">
+          <input type="file" id="image" name="image" accept="image/*"/>
+        </div>
+        <button type="submit">Create Post</button>
+      </form>
     </div>
 
-    <script>
-        async function checkAuth() {
-            try {
-                const response = await fetch('/check-session');
-                const data = await response.json();
-                if (data.authenticated) {
-                    document.getElementById('username').textContent = data.user.username;
-                } else {
-                    window.location.href = '/login';
-                }
-            } catch (error) {
-                console.error('Auth check failed:', error);
-            }
-        }
+    <div id="posts"></div>
+  </div>
 
-        async function logout() {
-            try {
-                await fetch('/logout', { method: 'POST' });
-                window.location.href = '/login';
-            } catch (error) {
-                console.error('Logout failed:', error);
-            }
-        }
-
-        async function deletePost(postId) {
-            if (!confirm('Are you sure you want to delete this post?')) return;
-            
-            try {
-                const response = await fetch(`/posts/${postId}`, {
-                    method: 'DELETE'
-                });
-                
-                if (response.ok) {
-                    await loadPosts();
-                } else {
-                    const error = await response.json();
-                    alert(error.error || 'Failed to delete post');
-                }
-            } catch (error) {
-                console.error('Failed to delete post:', error);
-                alert('Failed to delete post');
-            }
-        }
-
-        async function submitReply(postId, replyTextarea) {
-            try {
-                const content = replyTextarea.value;
-                if (!content.trim()) return;
-
-                const response = await fetch(`/post/${postId}/reply`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ content })
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    replyTextarea.value = '';
-                    await loadPosts();
-                }
-            } catch (error) {
-                console.error('Failed to submit reply:', error);
-            }
-        
-function createReplyForm(postId) {
-  const replyForm = document.createElement('div');
-  replyForm.className = 'reply-form';
-  replyForm.innerHTML = `
-    <textarea class="reply-textarea" placeholder="Write your reply..."></textarea>
-    <button type="button" class="reply-button">Reply</button>
-  `;
-
-  const textarea = replyForm.querySelector('.reply-textarea');
-  const button = replyForm.querySelector('.reply-button');
-  button.addEventListener('click', () => submitReply(postId, textarea));
-  return replyForm;
-}
-
-        function displayReplies(replies) {
-            if (!replies || replies.length === 0) return '';
-            
-            return `
-                <div class="replies">
-                    ${replies.map(reply => `
-                        <div class="reply">
-                            <div class="reply-author">Reply by: ${reply.author.username}</div>
-                            <div class="reply-content">${reply.content}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-async function loadPosts() {
-    try {
-        const response = await fetch('/posts');
-        const posts = await response.json();
-        const postsContainer = document.getElementById('posts');
-        
-        // Get current user's username for comparison
-        const authResponse = await fetch('/check-session');
-        const authData = await authResponse.json();
-        const currentUser = authData.user?.username;
-        
-        postsContainer.innerHTML = '';
-
-        posts.forEach(post => {
-            const postElement = document.createElement('div');
-            const isEuterpePost = post.author.username.toLowerCase() === 'euterpe';
-            postElement.className = `post ${isEuterpePost ? 'euterpe-post' : ''}`;
-            
-            let postContent = `
-                <div class="post-header">
-                    <h3>${post.title}</h3>
-                    ${post.author.username === currentUser ? 
-                        `<button class="delete-btn" onclick="deletePost('${post._id}')">Delete</button>` 
-                        : ''}
-                </div>
-                <div class="author">Posted by: ${post.author.username}</div>
-                <div class="content">${post.content}</div>
-            `;
-            
-            if (post.image) {
-                postContent += `<img src="${post.image}" alt="Post image" class="post-image">`;
-            }
-
-            // Add existing replies
-            postContent += displayReplies(post.replies);
-
-            postElement.innerHTML = postContent;
-
-            // Add reply form
-            const replyForm = createReplyForm(post._id);
-            postElement.appendChild(replyForm);
-
-            postsContainer.appendChild(postElement);
-        });
-    } catch (error) {
-        console.error('Failed to load posts:', error);
-    }
-}
-
-        // Handle form submission
-        document.getElementById('create-post-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append('title', document.getElementById('title').value);
-            formData.append('content', document.getElementById('content').value);
-            const imageFile = document.getElementById('image').files[0];
-            if (imageFile) {
-                formData.append('image', imageFile);
-            }
-
-            try {
-                const response = await fetch('/post', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                if (result.success) {
-                    document.getElementById('create-post-form').reset();
-                    loadPosts();
-                }
-            } catch (error) {
-                console.error('Failed to create post:', error);
-            }
-        });
-
-        // Initialize
-        checkAuth();
-        loadPosts();
-    </script>
+  <!-- Load the single, unified client script from /public -->
+  <script src="/script.js" defer></script>
 </body>
 </html>
